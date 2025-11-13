@@ -1,0 +1,29 @@
+{
+  "commission_percentage": 50,
+  "min_withdrawal": 225,
+  "admin_password": "pbkdf2:sha256:600000$fZp0qXyK2QvP8mZH$8f9d8a3e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
+  "ads_enabled": true,
+  "whatsapp_contact": "",
+  "email_contact": "",
+  "payment_methods": [
+    {
+      "id": 1,
+      "type": "Easypaisa",
+      "account_number": "03001234567",
+      "account_name": "YourEmpire Admin"
+    },
+    {
+      "id": 2,
+      "type": "JazzCash",
+      "account_number": "03007654321",
+      "account_name": "YourEmpire Admin"
+    },
+    {
+      "id": 3,
+      "type": "Bank Account",
+      "account_number": "PK12XXXX1234567890",
+      "account_name": "YourEmpire Admin",
+      "bank_name": "Allied Bank"
+    }
+  ]
+}
