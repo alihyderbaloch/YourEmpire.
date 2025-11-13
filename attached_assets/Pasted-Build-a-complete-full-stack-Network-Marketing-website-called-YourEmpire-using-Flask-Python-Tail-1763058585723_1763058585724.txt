@@ -1,0 +1,152 @@
+Build a complete full-stack Network Marketing website called *YourEmpire* using Flask (Python), TailwindCSS, and JSON-based local storage.  
+The system must be 100% offline — no external APIs or databases. All data must be saved in local JSON files.
+
+🎯 Key Features:
+1. *User Registration & Login*
+   - Register new users with fields: Name, Email, Password, and optional Referral Code.
+   - Automatically generate unique referral codes like “YE####”.
+   - Store user data in users.json with their referral relationships.
+
+2. *Referral & Wallet System*
+   - Every user gets a referral link (e.g. /register?ref=YE1234).
+   - When a referred user buys a package and admin approves it, referrer earns *50% commission*.
+   - Each user has a wallet balance (in PKR) saved in users.json.
+   - Wallet auto-updates on commission or withdrawal approval.
+
+3. *Packages (YourEmpire Plans)*
+   - Bronze → 450 PKR  
+   - Silver → 1000 PKR  
+   - Diamond → 1250 PKR  
+   - Platinum → 2000 PKR  
+   Store them in packages.json.
+
+4. *Payment System*
+   - User can buy packages via payment form.
+   - Fields: package, payment method (Easypaisa / JazzCash), account number, account name, transaction ID, and optional screenshot upload.
+   - All data saved in payments.json.
+   - Payment status: Pending, Approved, or Rejected.
+
+5. *Withdrawal System*
+   - Users can request withdrawals (min 225 PKR by default).
+   - Fields: amount, payment method, account details.
+   - Store in withdraws.json.
+   - Admin can approve or reject withdrawal requests.
+   - Approved withdrawals deduct from user wallet automatically.
+   - Admin can set or change the minimum withdrawal limit anytime.
+
+6. *Admin Panel*
+   - Hardcoded login:  
+     Email: admin@yourempire.com  
+     Password: admin123
+   - Admin can:
+     - View all users, payments, and withdrawal requests.
+     - Approve or reject payments and withdrawals.
+     - Manually adjust any user’s wallet balance (+/-).
+     - Add, edit, or delete packages.
+     - Adjust the commission percentage globally (e.g. 50%, 20%, etc).
+     - Adjust minimum withdrawal limit.
+     - Add WhatsApp and Email contact buttons for user support.
+     - Upload ads (video/photo/download link) for the *Ad Section*.
+     - Set how much PKR per ad view (even decimals like 0.00001 PKR).
+     - Enable or disable Ad Section visibility for all users.
+     - Track ad analytics: total ads uploaded, total views, and total ad payouts.
+     - See general statistics (total users, payments, withdrawals, total commissions).
+     - Change admin password manually.
+
+7. *Ad Watching System (New Section)*
+   - Add a "Watch Ads" button visible on the user dashboard (only if enabled by admin).
+   - When enabled, users can view ads uploaded by admin:
+       • Video ads (mp4, webm)
+       • Image ads (jpg, jpeg, png)
+       • Download link ads (e.g. app link or affiliate offer)
+   - Each ad has:
+       - Title
+       - Description
+       - Reward (e.g. 0.0005 PKR)
+       - Type (video / image / link)
+       - View limit per user (optional)
+   - When a user watches or clicks the ad, the reward is added to their wallet automatically.
+   - Prevent multiple rewards for the same ad per user per day.
+   - Save all ad data and view logs in `ads.json` and `ad_views.json`.
+   - Admin can:
+       - Upload, edit, or delete ads.
+       - Set PKR reward per ad.
+       - View how many users viewed each ad.
+       - Enable/disable ads globally.
+   - Users can:
+       - See available ads on their dashboard.
+       - View history of watched ads and earned rewards.
+
+8. *Forgot Password (Manual Version)*
+   - Add a “Forgot Password” option where user enters their email.
+   - System shows a message to “contact admin” for password reset (offline).
+
+9. *Design & Responsiveness*
+   - Use TailwindCSS via CDN for modern design.
+   - Theme: purple-blue gradient (YourEmpire brand colors).
+   - Fully responsive for mobile and desktop.
+   - Clean cards, buttons, and navigation.
+   - Navbar: Home, Dashboard, Watch Ads (if enabled), Logout.
+   - Dashboard cards show: referral code, wallet, packages, ads watched, total earnings.
+   - Small “Made with ❤️ by YourEmpire” footer.
+
+10. *Security*
+   - Use secure password hashing with Werkzeug.
+   - Session-based login system.
+   - File upload limit: 5 MB, accepted formats only (jpg, jpeg, png, mp4, pdf).
+   - Prevent direct JSON access from browser.
+
+11. *Project Structure*
+/YourEmpire
+├── app.py
+├── users.json
+├── packages.json
+├── payments.json
+├── withdraws.json
+├── ads.json
+├── ad_views.json
+├── templates/
+│   ├── index.html
+│   ├── register.html
+│   ├── login.html
+│   ├── user_dashboard.html
+│   ├── buy_package.html
+│   ├── withdraw.html
+│   ├── watch_ads.html
+│   ├── admin_dashboard.html
+│   ├── manage_ads.html
+│   ├── change_admin_password.html
+│   └── forgot_password.html
+├── static/
+│   ├── css/
+│   ├── uploads/
+│   └── ads/
+└── replit.md
+
+12. *Functionality Summary*
+   - Users can:
+     - Register/login with or without referral.
+     - View dashboard (referral code, wallet, payments, withdrawals, ads watched).
+     - Buy package.
+     - Watch ads and earn micro-rewards.
+     - Request withdrawal.
+     - See payment, withdrawal, and ad history.
+   - Admin can:
+     - Manage everything from one dashboard.
+     - Adjust commission and withdrawal rules.
+     - Upload and control ads & user earnings.
+     - Change admin password.
+     - View reports, logs, and analytics.
+
+13. *Testing Flow*
+   - Register user A → get referral code YE1234.
+   - Register user B using A’s referral.
+   - B buys package → Admin approves → A gets 50% in wallet.
+   - Admin uploads ad → enables ad section → sets 0.0005 PKR/view.
+   - A watches ad → wallet increases by 0.0005 PKR.
+   - A requests withdrawal → Admin approves → wallet deducts.
+
+📱 Must be fully mobile-friendly with gradient backgrounds and modern card UI.  
+💾 Must use JSON only (no SQL, Firebase, or API).  
+🎨 Include “Made with ❤ by YourEmpire” footer.  
+Finally, start Flask server on port 5000 and confirm all pages render correctly.
