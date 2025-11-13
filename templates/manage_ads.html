@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Ads - YourEmpire Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 min-h-screen">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-white">YourEmpire Admin</h1>
+                <div class="space-x-4">
+                    <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
+                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Manage Ads</a>
+                    <a href="{{ url_for('change_admin_password') }}" class="text-white hover:text-purple-200 transition">Change Password</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-500/20 text-red-100{% else %}bg-green-500/20 text-green-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="text-3xl font-bold text-white mb-6">Manage Ads</h2>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">Add New Ad</h3>
+            <form method="POST" action="{{ url_for('add_ad') }}" enctype="multipart/form-data" class="space-y-4">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white mb-2">Ad Title</label>
+                        <input type="text" name="title" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    </div>
+                    <div>
+                        <label class="block text-white mb-2">Ad Type</label>
+                        <select name="ad_type" id="ad_type" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                            <option value="video">Video</option>
+                            <option value="image">Image</option>
+                            <option value="link">Download Link</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-white mb-2">Description</label>
+                    <textarea name="description" rows="3" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-white mb-2">Reward per View (PKR)</label>
+                    <input type="number" name="reward" step="0.00001" min="0" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white" placeholder="0.0005">
+                </div>
+
+                <div id="media_upload" class="block">
+                    <label class="block text-white mb-2">Upload Media (Video/Image)</label>
+                    <input type="file" name="media_file" accept="video/*,image/*" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                </div>
+
+                <div id="link_input" style="display:none;">
+                    <label class="block text-white mb-2">Link URL</label>
+                    <input type="url" name="link" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white" placeholder="https://example.com">
+                </div>
+
+                <button type="submit" class="bg-white text-purple-600 px-6 py-3 rounded-lg font-bold hover:bg-purple-100 transition">
+                    Add Ad
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <h3 class="text-2xl font-bold text-white mb-4">Existing Ads</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-2">ID</th>
+                            <th class="text-left py-2">Title</th>
+                            <th class="text-left py-2">Type</th>
+                            <th class="text-left py-2">Reward</th>
+                            <th class="text-left py-2">Views</th>
+                            <th class="text-left py-2">Created</th>
+                            <th class="text-left py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ad in ads %}
+                        <tr class="border-b border-white/10">
+                            <td class="py-2">#{{ ad.id }}</td>
+                            <td class="py-2">{{ ad.title }}</td>
+                            <td class="py-2">{{ ad.type }}</td>
+                            <td class="py-2 text-green-400">{{ ad.reward }} PKR</td>
+                            <td class="py-2">{{ ad.views }}</td>
+                            <td class="py-2 text-sm">{{ ad.created_date }}</td>
+                            <td class="py-2">
+                                <a href="{{ url_for('delete_ad', ad_id=ad.id) }}" class="text-red-400 hover:text-red-300" onclick="return confirm('Delete this ad?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-white/60">No ads created yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const adTypeSelect = document.getElementById('ad_type');
+        const mediaUpload = document.getElementById('media_upload');
+        const linkInput = document.getElementById('link_input');
+
+        adTypeSelect.addEventListener('change', function() {
+            if (this.value === 'link') {
+                mediaUpload.style.display = 'none';
+                linkInput.style.display = 'block';
+            } else {
+                mediaUpload.style.display = 'block';
+                linkInput.style.display = 'none';
+            }
+        });
+    </script>
+
+    <footer class="bg-white/10 backdrop-blur-md border-t border-white/20 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-white/80">Made with ❤️ by YourEmpire</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - YourEmpire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 min-h-screen">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-white">YourEmpire Admin</h1>
+                <div class="space-x-4">
+                    <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
+                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Manage Ads</a>
+                    <a href="{{ url_for('change_admin_password') }}" class="text-white hover:text-purple-200 transition">Change Password</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-500/20 text-red-100{% else %}bg-green-500/20 text-green-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="text-3xl font-bold text-white mb-6">Admin Dashboard</h2>
+
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Users</h3>
+                <p class="text-4xl font-bold text-white">{{ stats.total_users }}</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Pending Payments</h3>
+                <p class="text-4xl font-bold text-yellow-300">{{ stats.pending_payments }}</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Pending Withdrawals</h3>
+                <p class="text-4xl font-bold text-yellow-300">{{ stats.pending_withdrawals }}</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Ad Views</h3>
+                <p class="text-4xl font-bold text-green-300">{{ stats.total_ad_views }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">System Settings</h3>
+            <form method="POST" action="{{ url_for('update_settings') }}" class="space-y-4">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white mb-2">Commission Percentage (%)</label>
+                        <input type="number" name="commission_percentage" value="{{ settings.commission_percentage }}" step="0.01" min="0" max="100" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    </div>
+                    <div>
+                        <label class="block text-white mb-2">Minimum Withdrawal (PKR)</label>
+                        <input type="number" name="min_withdrawal" value="{{ settings.min_withdrawal }}" step="0.01" min="0" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    </div>
+                    <div>
+                        <label class="block text-white mb-2">WhatsApp Contact</label>
+                        <input type="text" name="whatsapp_contact" value="{{ settings.get('whatsapp_contact', '') }}" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white placeholder-white/50" placeholder="+92 XXX XXXXXXX">
+                    </div>
+                    <div>
+                        <label class="block text-white mb-2">Email Contact</label>
+                        <input type="email" name="email_contact" value="{{ settings.get('email_contact', '') }}" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white placeholder-white/50" placeholder="support@yourempire.com">
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="ads_enabled" id="ads_enabled" {% if settings.ads_enabled %}checked{% endif %} class="mr-2">
+                    <label for="ads_enabled" class="text-white">Enable Ad Section for Users</label>
+                </div>
+                <button type="submit" class="bg-white text-purple-600 px-6 py-2 rounded-lg font-bold hover:bg-purple-100 transition">
+                    Update Settings
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">Payment Methods Management</h3>
+            
+            <div class="mb-6">
+                <h4 class="text-xl text-white mb-3">Add New Payment Method</h4>
+                <form method="POST" action="{{ url_for('manage_payment_methods') }}" class="space-y-4">
+                    <input type="hidden" name="action" value="add">
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-white mb-2">Type</label>
+                            <select name="type" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                                <option value="Easypaisa">Easypaisa</option>
+                                <option value="JazzCash">JazzCash</option>
+                                <option value="Bank Account">Bank Account</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-white mb-2">Account Number</label>
+                            <input type="text" name="account_number" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                        </div>
+                        <div>
+                            <label class="block text-white mb-2">Account Name</label>
+                            <input type="text" name="account_name" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                        </div>
+                        <div>
+                            <label class="block text-white mb-2">Bank Name (if applicable)</label>
+                            <input type="text" name="bank_name" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition">
+                        Add Payment Method
+                    </button>
+                </form>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-2">Type</th>
+                            <th class="text-left py-2">Account Number</th>
+                            <th class="text-left py-2">Account Name</th>
+                            <th class="text-left py-2">Bank</th>
+                            <th class="text-left py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for method in settings.get('payment_methods', []) %}
+                        <tr class="border-b border-white/10">
+                            <td class="py-2">{{ method.type }}</td>
+                            <td class="py-2 font-mono">{{ method.account_number }}</td>
+                            <td class="py-2">{{ method.account_name }}</td>
+                            <td class="py-2">{{ method.get('bank_name', 'N/A') }}</td>
+                            <td class="py-2">
+                                <form method="POST" action="{{ url_for('manage_payment_methods') }}" style="display:inline;">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="method_id" value="{{ method.id }}">
+                                    <button type="submit" class="text-red-400 hover:text-red-300" onclick="return confirm('Delete this payment method?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">Package Management</h3>
+            
+            <div class="mb-6">
+                <h4 class="text-xl text-white mb-3">Add New Package</h4>
+                <form method="POST" action="{{ url_for('manage_packages') }}" class="flex gap-4">
+                    <input type="hidden" name="action" value="add">
+                    <input type="text" name="name" placeholder="Package Name" required class="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    <input type="number" name="price" placeholder="Price (PKR)" step="0.01" required class="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition">Add</button>
+                </form>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% for package in packages %}
+                <div class="bg-white/20 rounded-lg p-4">
+                    <h4 class="text-white font-bold text-lg">{{ package.name }}</h4>
+                    <p class="text-white text-2xl">{{ package.price }} PKR</p>
+                    <form method="POST" action="{{ url_for('manage_packages') }}" class="mt-2">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        <button type="submit" class="text-red-400 hover:text-red-300 text-sm" onclick="return confirm('Delete this package?')">Delete</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">Pending Payments</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-2">User</th>
+                            <th class="text-left py-2">Package</th>
+                            <th class="text-left py-2">Amount</th>
+                            <th class="text-left py-2">Method</th>
+                            <th class="text-left py-2">Transaction ID</th>
+                            <th class="text-left py-2">Date</th>
+                            <th class="text-left py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        {% if payment.status == 'Pending' %}
+                        <tr class="border-b border-white/10">
+                            <td class="py-2">
+                                {% for user in users %}
+                                    {% if user.id == payment.user_id %}{{ user.name }}{% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="py-2">{{ payment.package_name }}</td>
+                            <td class="py-2">{{ payment.amount }} PKR</td>
+                            <td class="py-2">{{ payment.payment_method }}</td>
+                            <td class="py-2 font-mono text-sm">{{ payment.transaction_id }}</td>
+                            <td class="py-2 text-sm">{{ payment.date }}</td>
+                            <td class="py-2 space-x-2">
+                                <a href="{{ url_for('approve_payment', payment_id=payment.id) }}" class="text-green-400 hover:text-green-300">Approve</a>
+                                <a href="{{ url_for('reject_payment', payment_id=payment.id) }}" class="text-red-400 hover:text-red-300">Reject</a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">Pending Withdrawals</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-2">User</th>
+                            <th class="text-left py-2">Amount</th>
+                            <th class="text-left py-2">Method</th>
+                            <th class="text-left py-2">Account</th>
+                            <th class="text-left py-2">Date</th>
+                            <th class="text-left py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for withdrawal in withdrawals %}
+                        {% if withdrawal.status == 'Pending' %}
+                        <tr class="border-b border-white/10">
+                            <td class="py-2">
+                                {% for user in users %}
+                                    {% if user.id == withdrawal.user_id %}{{ user.name }}{% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="py-2">{{ withdrawal.amount }} PKR</td>
+                            <td class="py-2">{{ withdrawal.payment_method }}</td>
+                            <td class="py-2 text-sm">{{ withdrawal.account_number }} - {{ withdrawal.account_name }}</td>
+                            <td class="py-2 text-sm">{{ withdrawal.date }}</td>
+                            <td class="py-2 space-x-2">
+                                <a href="{{ url_for('approve_withdrawal', withdrawal_id=withdrawal.id) }}" class="text-green-400 hover:text-green-300">Approve</a>
+                                <a href="{{ url_for('reject_withdrawal', withdrawal_id=withdrawal.id) }}" class="text-red-400 hover:text-red-300">Reject</a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <h3 class="text-2xl font-bold text-white mb-4">User Management</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-2">Name</th>
+                            <th class="text-left py-2">Email</th>
+                            <th class="text-left py-2">Referral Code</th>
+                            <th class="text-left py-2">Wallet</th>
+                            <th class="text-left py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="border-b border-white/10">
+                            <td class="py-2">{{ user.name }}</td>
+                            <td class="py-2">{{ user.email }}</td>
+                            <td class="py-2 font-mono">{{ user.referral_code }}</td>
+                            <td class="py-2">{{ "%.2f"|format(user.wallet) }} PKR</td>
+                            <td class="py-2">
+                                <form method="POST" action="{{ url_for('adjust_wallet', user_id=user.id) }}" class="flex gap-2">
+                                    <input type="number" name="amount" step="0.01" placeholder="±Amount" class="w-24 px-2 py-1 rounded bg-white/20 text-white border border-white/30 text-sm">
+                                    <button type="submit" class="text-green-400 hover:text-green-300 text-sm">Adjust</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white/10 backdrop-blur-md border-t border-white/20 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-white/80">Made with ❤️ by YourEmpire</p>
+        </div>
+    </footer>
+</body>
+</html>
