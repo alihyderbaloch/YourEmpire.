@@ -1,7 +1,7 @@
 {
   "commission_percentage": 50,
   "min_withdrawal": 225,
-  "admin_password": "pbkdf2:sha256:600000$fZp0qXyK2QvP8mZH$8f9d8a3e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
+  "admin_password": "scrypt:32768:8:1$0wLTmO6OX2C7WL4o$857be8407feb14102daa999ec43976d6b8b808a585bf14f417de24df4f08bcf9de1a16a3c534f4c38151d0618b2fca0347d018ebdaed81a218aea95fe8262ebc",
   "ads_enabled": true,
   "whatsapp_contact": "",
   "email_contact": "",
