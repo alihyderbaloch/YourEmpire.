@@ -1,0 +1,176 @@
+🔥 1. Permanent Data Storage (No Loss After Render Sleep)
+
+Implement PostgreSQL as the main database.
+All data must be saved permanently including:
+
+Users
+
+Admins
+
+Master Admin
+
+Ads
+
+Views
+
+Referral data
+
+User profiles
+
+Announcements
+
+Guide videos
+
+Any logs
+
+Use Render free tier PostgreSQL, connect using DATABASE_URL.
+No local JSON file and no temporary storage.
+Everything must be fully permanent.
+
+🔥 2. Forgot Password System (Admin Controlled Only)
+
+Add a “Forgot Password?” button for users.
+When clicked:
+
+A request is sent to Master Admin Dashboard
+
+Master Admin can manually reset password
+
+Basic Admins cannot see or access these requests
+
+System must send notification to the user (email or in-app alert)
+
+🔥 3. Master Admin Role (New)
+
+Create a Master Admin with full authority:
+Master Admin can:
+
+Add/Remove/Suspend Admins
+
+Change admin emails/passwords
+
+Disable the entire admin login page (maintenance mode switch)
+
+Change Master Admin own password/email
+
+View all logs
+
+See all user-level details
+
+Basic Admins are restricted and cannot modify structure.
+
+🔥 4. User Registration Changes
+
+User registration must include:
+
+Full Name
+
+Email
+
+Phone Number (WhatsApp required)
+
+City / Address
+
+Referral Code (optional)
+
+Password (minimum 8 characters)
+
+Admins should see this full info in the user list.
+
+🔥 5. Show Referral Source in Admin Panel
+
+In Admin → Users List page, show:
+
+Who referred the user
+
+Referral ID / Code
+
+Joined date
+
+Investment status (see point #7)
+
+🔥 6. Password Requirements
+
+User’s password must be minimum 8 characters, validated on signup & reset.
+
+🔥 7. Investment Status Tracking
+
+In admin’s user list, add one of the following:
+
+A small green tick or
+
+A dedicated “Invested” column
+Admin can approve investment manually.
+Referral bonus logic should consider investment status.
+
+🔥 8. User Guide Video Section
+
+Inside User Profile (frontend):
+Add a Guide Video box at the bottom.
+Admin can upload the guide video (MP4 or YouTube link).
+This video should be viewable only by logged-in users.
+
+🔥 9. Announcement / Offer System
+
+Admin can enable or disable announcements globally.
+Admin can upload:
+
+Text
+
+Image
+
+Video
+
+If text → style it beautifully (“TipTop style”), big bold, attractive.
+Announcements appear at top of user dashboard.
+
+Admin can turn ON/OFF announcement visibility.
+
+🔥 10. Everything Must Be Permanent
+
+Ensure:
+
+Users
+
+Ads
+
+Ads data
+
+Views
+
+Referrals
+
+Admin settings
+
+Video uploads
+
+Announcements
+
+Nothing should ever delete automatically.
+The structure must be stable, scalable, future proof.
+
+⚙️ Tech Requirements
+
+Backend: Flask OR Node.js (doesn't matter but must be stable)
+
+Database: PostgreSQL (Render free tier)
+
+ORM (SQLAlchemy or Prisma)
+
+Secure password hashing
+
+JWT login sessions
+
+Clean folder structure
+
+Admin panel protected
+
+Master Admin isolated
+
+Full mobile responsiveness
+
+All APIs tested
+
+FINAL INSTRUCTION
+
+Build, fix, update, and generate all required files, code, APIs, database models, and frontend pages exactly according to these rules. Do NOT ignore any point
