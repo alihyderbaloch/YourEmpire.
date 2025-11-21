@@ -1,48 +1,28 @@
 import os
 import json
-import random
 from datetime import datetime, timedelta
 from functools import wraps
-from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
+from models import db, User, Admin, MasterAdmin, Package, Payment, Withdrawal, PaymentMethod, Ad, AdView, Settings, Announcement, GuideVideo, PasswordResetRequest, ProfileUpdateRequest, LoginHistory
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SESSION_SECRET', 'yourempire-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ADS_FOLDER'] = 'static/ads'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///yourempire.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'mp4', 'webm'}
 
+db.init_app(app)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def load_json(filename):
-    try:
-        with open(filename, 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return [] if filename != 'settings.json' else {
-            "commission_percentage": 50,
-            "min_withdrawal": 225,
-            "admin_password": generate_password_hash("admin123"),
-            "ads_enabled": True,
-            "whatsapp_contact": "",
-            "email_contact": "",
-            "payment_methods": []
-        }
-
-def save_json(filename, data):
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=2)
-
-def generate_referral_code():
-    users = load_json('users.json')
-    while True:
-        code = f"YE{random.randint(1000, 9999)}"
-        if not any(u['referral_code'] == code for u in users):
-            return code
 
 def login_required(f):
     @wraps(f)
@@ -56,23 +36,46 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
+        if 'admin_id' not in session and 'master_admin_id' not in session:
             flash('Admin access required.', 'error')
-            return redirect(url_for('login'))
+            return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
-def get_user_by_id(user_id):
-    users = load_json('users.json')
-    return next((u for u in users if u['id'] == user_id), None)
+def master_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'master_admin_id' not in session:
+            flash('Master Admin access required.', 'error')
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-def update_user_wallet(user_id, amount):
-    users = load_json('users.json')
-    for user in users:
-        if user['id'] == user_id:
-            user['wallet'] = round(user['wallet'] + amount, 2)
-            break
-    save_json('users.json', users)
+def get_setting(key, default=None):
+    setting = Settings.query.filter_by(key=key).first()
+    return setting.value if setting else default
+
+def set_setting(key, value):
+    setting = Settings.query.filter_by(key=key).first()
+    if setting:
+        setting.value = str(value)
+    else:
+        setting = Settings(key=key, value=str(value))
+        db.session.add(setting)
+    db.session.commit()
+
+def init_default_settings():
+    if not Settings.query.first():
+        defaults = {
+            'commission_percentage': '50',
+            'min_withdrawal': '225',
+            'ads_enabled': 'true',
+            'maintenance_mode': 'false'
+        }
+        for key, value in defaults.items():
+            setting = Settings(key=key, value=value)
+            db.session.add(setting)
+        db.session.commit()
 
 @app.route('/')
 def index():
@@ -81,39 +84,44 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
-        ref_code = request.form.get('referral_code', '').strip()
+        full_name = request.form.get('full_name')
+        phone = request.form.get('phone')
+        city = request.form.get('city')
+        address = request.form.get('address', '')
+        referral_code = request.form.get('referral_code', '').strip()
         
-        users = load_json('users.json')
+        if len(password) < 8:
+            flash('Password must be at least 8 characters!', 'error')
+            return redirect(url_for('register'))
         
-        if any(u['email'] == email for u in users):
+        if User.query.filter_by(email=email).first():
             flash('Email already registered!', 'error')
             return redirect(url_for('register'))
         
         referred_by = None
-        if ref_code:
-            referrer = next((u for u in users if u['referral_code'] == ref_code), None)
+        if referral_code:
+            referrer = User.query.filter_by(referral_code=referral_code).first()
             if referrer:
-                referred_by = referrer['id']
+                referred_by = referrer.id
             else:
                 flash('Invalid referral code!', 'error')
                 return redirect(url_for('register'))
         
-        new_user = {
-            'id': len(users) + 1,
-            'name': name,
-            'email': email,
-            'password': generate_password_hash(password),
-            'referral_code': generate_referral_code(),
-            'wallet': 0.0,
-            'referred_by': referred_by,
-            'joined_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
+        new_user = User(
+            email=email,
+            full_name=full_name,
+            phone=phone,
+            city=city,
+            address=address,
+            referral_code=User.generate_referral_code(),
+            referred_by=referred_by
+        )
+        new_user.set_password(password)
         
-        users.append(new_user)
-        save_json('users.json', users)
+        db.session.add(new_user)
+        db.session.commit()
         
         flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('login'))
@@ -127,32 +135,55 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        if email == 'admin@yourempire.com':
-            settings = load_json('settings.json')
-            admin_pass = settings.get('admin_password', generate_password_hash('admin123'))
-            
-            if check_password_hash(admin_pass, password):
-                session['is_admin'] = True
-                session['admin_email'] = email
-                flash('Admin login successful!', 'success')
-                return redirect(url_for('admin_dashboard'))
-            else:
-                flash('Invalid admin credentials!', 'error')
-                return redirect(url_for('login'))
+        user = User.query.filter_by(email=email, is_active=True).first()
         
-        users = load_json('users.json')
-        user = next((u for u in users if u['email'] == email), None)
-        
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['user_name'] = user['name']
-            flash(f'Welcome back, {user["name"]}!', 'success')
+        if user and user.check_password(password):
+            session['user_id'] = user.id
+            session['user_name'] = user.full_name
+            login_log = LoginHistory(user_id=user.id, login_type='user', ip_address=request.remote_addr)
+            db.session.add(login_log)
+            db.session.commit()
+            flash(f'Welcome back, {user.full_name}!', 'success')
             return redirect(url_for('user_dashboard'))
         else:
             flash('Invalid email or password!', 'error')
             return redirect(url_for('login'))
     
     return render_template('login.html')
+
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    maintenance = get_setting('maintenance_mode', 'false').lower() == 'true'
+    if maintenance:
+        return render_template('maintenance.html'), 503
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        master_admin = MasterAdmin.query.filter_by(email=email).first()
+        if master_admin and master_admin.check_password(password):
+            session['master_admin_id'] = master_admin.id
+            session['admin_email'] = email
+            login_log = LoginHistory(master_admin_id=master_admin.id, login_type='master', ip_address=request.remote_addr)
+            db.session.add(login_log)
+            db.session.commit()
+            flash('Master Admin login successful!', 'success')
+            return redirect(url_for('master_admin_dashboard'))
+        
+        admin = Admin.query.filter_by(email=email, is_active=True).first()
+        if admin and admin.check_password(password):
+            session['admin_id'] = admin.id
+            session['admin_email'] = email
+            login_log = LoginHistory(admin_id=admin.id, login_type='admin', ip_address=request.remote_addr)
+            db.session.add(login_log)
+            db.session.commit()
+            flash('Admin login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        
+        flash('Invalid admin credentials!', 'error')
+    
+    return render_template('admin_login.html')
 
 @app.route('/logout')
 def logout():
@@ -164,35 +195,88 @@ def logout():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
-        flash('Please contact admin for password reset. Check contact details on the homepage.', 'info')
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            existing_request = PasswordResetRequest.query.filter_by(user_id=user.id, status='Pending').first()
+            if not existing_request:
+                reset_request = PasswordResetRequest(user_id=user.id)
+                db.session.add(reset_request)
+                db.session.commit()
+                flash('Password reset request submitted. Master Admin will contact you soon.', 'success')
+            else:
+                flash('You already have a pending reset request.', 'info')
+        else:
+            flash('Email not found!', 'error')
+        
         return redirect(url_for('login'))
+    
     return render_template('forgot_password.html')
 
 @app.route('/dashboard')
 @login_required
 def user_dashboard():
-    user = get_user_by_id(session['user_id'])
-    packages = load_json('packages.json')
-    payments = [p for p in load_json('payments.json') if p['user_id'] == user['id']]
-    withdrawals = [w for w in load_json('withdraws.json') if w['user_id'] == user['id']]
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     
-    ad_views = load_json('ad_views.json')
-    user_ad_views = [av for av in ad_views if av['user_id'] == user['id']]
-    total_ad_earnings = sum(av['reward'] for av in user_ad_views)
-    
-    settings = load_json('settings.json')
-    ads_enabled = settings.get('ads_enabled', True)
-    
-    referrals = [u for u in load_json('users.json') if u.get('referred_by') == user['id']]
+    payments = Payment.query.filter_by(user_id=user.id).all()
+    withdrawals = Withdrawal.query.filter_by(user_id=user.id).all()
+    ad_views = AdView.query.filter_by(user_id=user.id).all()
+    total_ad_earnings = sum(av.ad.reward for av in ad_views)
+    ads_enabled = get_setting('ads_enabled', 'true').lower() == 'true'
+    referrals = User.query.filter_by(referred_by=user.id).all()
+    announcements = Announcement.query.filter_by(is_active=True).all()
+    guide_videos = GuideVideo.query.all()
     
     return render_template('user_dashboard.html', 
                          user=user, 
-                         packages=packages, 
                          payments=payments,
                          withdrawals=withdrawals,
                          ads_enabled=ads_enabled,
                          total_ad_earnings=total_ad_earnings,
-                         referrals=referrals)
+                         referrals=referrals,
+                         announcements=announcements,
+                         guide_videos=guide_videos)
+
+@app.route('/user-profile')
+@login_required
+def user_profile():
+    user = User.query.get(session['user_id'])
+    referral_tree = []
+    
+    def build_tree(u):
+        return {
+            'id': u.id,
+            'name': u.full_name,
+            'email': u.email,
+            'is_invested': u.is_invested,
+            'children': [build_tree(ref) for ref in u.referred_users]
+        }
+    
+    referral_tree = build_tree(user)
+    pending_updates = ProfileUpdateRequest.query.filter_by(user_id=user.id, status='Pending').all()
+    
+    return render_template('user_profile.html', user=user, referral_tree=referral_tree, pending_updates=pending_updates)
+
+@app.route('/update-profile', methods=['POST'])
+@login_required
+def update_profile():
+    user = User.query.get(session['user_id'])
+    update_type = request.form.get('update_type')
+    new_value = request.form.get('new_value')
+    
+    if update_type == 'password' and len(new_value) < 8:
+        flash('Password must be at least 8 characters!', 'error')
+        return redirect(url_for('user_profile'))
+    
+    update_request = ProfileUpdateRequest(user_id=user.id, update_type=update_type, new_value=new_value)
+    db.session.add(update_request)
+    db.session.commit()
+    
+    flash('Update request submitted. Admin will review it.', 'success')
+    return redirect(url_for('user_profile'))
 
 @app.route('/buy-package', methods=['GET', 'POST'])
 @login_required
@@ -202,11 +286,8 @@ def buy_package():
         payment_method_id = int(request.form.get('payment_method'))
         transaction_id = request.form.get('transaction_id')
         
-        packages = load_json('packages.json')
-        package = next((p for p in packages if p['id'] == package_id), None)
-        
-        settings = load_json('settings.json')
-        payment_method = next((pm for pm in settings['payment_methods'] if pm['id'] == payment_method_id), None)
+        package = Package.query.get(package_id)
+        payment_method = PaymentMethod.query.get(payment_method_id)
         
         if not package or not payment_method:
             flash('Invalid package or payment method!', 'error')
@@ -217,42 +298,35 @@ def buy_package():
             file = request.files['screenshot']
             if file and file.filename and allowed_file(file.filename):
                 filename = secure_filename(f"{session['user_id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 screenshot = filename
         
-        payments = load_json('payments.json')
-        new_payment = {
-            'id': len(payments) + 1,
-            'user_id': session['user_id'],
-            'package_id': package_id,
-            'package_name': package['name'],
-            'amount': package['price'],
-            'payment_method': payment_method['type'],
-            'payment_account': payment_method['account_number'],
-            'transaction_id': transaction_id,
-            'screenshot': screenshot,
-            'status': 'Pending',
-            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
+        new_payment = Payment(
+            user_id=session['user_id'],
+            package_id=package_id,
+            amount=package.price,
+            payment_method_id=payment_method_id,
+            transaction_id=transaction_id,
+            screenshot=screenshot
+        )
         
-        payments.append(new_payment)
-        save_json('payments.json', payments)
+        db.session.add(new_payment)
+        db.session.commit()
         
         flash('Payment submitted successfully! Waiting for admin approval.', 'success')
         return redirect(url_for('user_dashboard'))
     
-    packages = load_json('packages.json')
-    settings = load_json('settings.json')
-    payment_methods = settings.get('payment_methods', [])
+    packages = Package.query.all()
+    payment_methods = PaymentMethod.query.all()
     
     return render_template('buy_package.html', packages=packages, payment_methods=payment_methods)
 
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
-    user = get_user_by_id(session['user_id'])
-    settings = load_json('settings.json')
-    min_withdrawal = settings.get('min_withdrawal', 225)
+    user = User.query.get(session['user_id'])
+    min_withdrawal = float(get_setting('min_withdrawal', 225))
     
     if request.method == 'POST':
         amount = float(request.form.get('amount'))
@@ -264,24 +338,20 @@ def withdraw():
             flash(f'Minimum withdrawal amount is {min_withdrawal} PKR!', 'error')
             return redirect(url_for('withdraw'))
         
-        if amount > user['wallet']:
+        if amount > user.wallet_balance:
             flash('Insufficient balance!', 'error')
             return redirect(url_for('withdraw'))
         
-        withdrawals = load_json('withdraws.json')
-        new_withdrawal = {
-            'id': len(withdrawals) + 1,
-            'user_id': user['id'],
-            'amount': amount,
-            'payment_method': payment_method,
-            'account_number': account_number,
-            'account_name': account_name,
-            'status': 'Pending',
-            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
+        new_withdrawal = Withdrawal(
+            user_id=user.id,
+            amount=amount,
+            payment_method=payment_method,
+            account_number=account_number,
+            account_name=account_name
+        )
         
-        withdrawals.append(new_withdrawal)
-        save_json('withdraws.json', withdrawals)
+        db.session.add(new_withdrawal)
+        db.session.commit()
         
         flash('Withdrawal request submitted! Waiting for admin approval.', 'success')
         return redirect(url_for('user_dashboard'))
@@ -291,146 +361,212 @@ def withdraw():
 @app.route('/watch-ads')
 @login_required
 def watch_ads():
-    settings = load_json('settings.json')
-    if not settings.get('ads_enabled', True):
+    ads_enabled = get_setting('ads_enabled', 'true').lower() == 'true'
+    if not ads_enabled:
         flash('Ad section is currently disabled.', 'info')
         return redirect(url_for('user_dashboard'))
     
-    ads = load_json('ads.json')
-    ad_views = load_json('ad_views.json')
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    user_today_views = db.session.query(AdView).filter(
+        AdView.user_id == session['user_id'],
+        db.func.date(AdView.viewed_at) == today
+    ).all()
+    viewed_ad_ids = [av.ad_id for av in user_today_views]
     
-    today = datetime.now().strftime('%Y-%m-%d')
-    user_today_views = [av for av in ad_views if av['user_id'] == session['user_id'] and av['date'].startswith(today)]
-    viewed_ad_ids = [av['ad_id'] for av in user_today_views]
+    available_ads = Ad.query.filter(Ad.is_active == True, Ad.id.notin_(viewed_ad_ids)).all()
+    ad_history = AdView.query.filter_by(user_id=session['user_id']).all()
     
-    available_ads = [ad for ad in ads if ad['id'] not in viewed_ad_ids]
-    
-    user_ad_history = [av for av in ad_views if av['user_id'] == session['user_id']]
-    
-    return render_template('watch_ads.html', ads=available_ads, ad_history=user_ad_history)
+    return render_template('watch_ads.html', ads=available_ads, ad_history=ad_history)
 
 @app.route('/view-ad/<int:ad_id>')
 @login_required
 def view_ad(ad_id):
-    ads = load_json('ads.json')
-    ad = next((a for a in ads if a['id'] == ad_id), None)
+    ad = Ad.query.get(ad_id)
     
     if not ad:
         flash('Ad not found!', 'error')
         return redirect(url_for('watch_ads'))
     
-    ad_views = load_json('ad_views.json')
-    today = datetime.now().strftime('%Y-%m-%d')
-    
-    already_viewed = any(
-        av['user_id'] == session['user_id'] and 
-        av['ad_id'] == ad_id and 
-        av['date'].startswith(today)
-        for av in ad_views
-    )
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    already_viewed = db.session.query(AdView).filter(
+        AdView.user_id == session['user_id'],
+        AdView.ad_id == ad_id,
+        db.func.date(AdView.viewed_at) == today
+    ).first()
     
     if already_viewed:
         flash('You have already viewed this ad today!', 'info')
         return redirect(url_for('watch_ads'))
     
-    new_view = {
-        'id': len(ad_views) + 1,
-        'user_id': session['user_id'],
-        'ad_id': ad_id,
-        'reward': ad['reward'],
-        'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    new_view = AdView(user_id=session['user_id'], ad_id=ad_id)
+    db.session.add(new_view)
+    
+    user = User.query.get(session['user_id'])
+    user.wallet_balance += ad.reward
+    
+    db.session.commit()
+    
+    flash(f'You earned {ad.reward} PKR for viewing this ad!', 'success')
+    return redirect(url_for('watch_ads'))
+
+@app.route('/master-admin/dashboard')
+@master_admin_required
+def master_admin_dashboard():
+    total_users = User.query.count()
+    total_admins = Admin.query.count()
+    pending_password_resets = PasswordResetRequest.query.filter_by(status='Pending').count()
+    pending_profile_updates = ProfileUpdateRequest.query.filter_by(status='Pending').count()
+    
+    stats = {
+        'total_users': total_users,
+        'total_admins': total_admins,
+        'pending_password_resets': pending_password_resets,
+        'pending_profile_updates': pending_profile_updates
     }
     
-    ad_views.append(new_view)
-    save_json('ad_views.json', ad_views)
+    admins = Admin.query.all()
+    return render_template('master_admin_dashboard.html', stats=stats, admins=admins)
+
+@app.route('/master-admin/add-admin', methods=['POST'])
+@master_admin_required
+def add_admin():
+    email = request.form.get('email')
+    password = request.form.get('password')
     
-    update_user_wallet(session['user_id'], ad['reward'])
+    if Admin.query.filter_by(email=email).first():
+        flash('Email already exists!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
     
-    flash(f'You earned {ad["reward"]} PKR for viewing this ad!', 'success')
-    return redirect(url_for('watch_ads'))
+    new_admin = Admin(email=email, created_by_master_id=session['master_admin_id'])
+    new_admin.set_password(password)
+    
+    db.session.add(new_admin)
+    db.session.commit()
+    
+    flash('Admin added successfully!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
+
+@app.route('/master-admin/deactivate-admin/<int:admin_id>')
+@master_admin_required
+def deactivate_admin(admin_id):
+    admin = Admin.query.get(admin_id)
+    if admin:
+        admin.is_active = False
+        db.session.commit()
+        flash('Admin deactivated!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
+
+@app.route('/master-admin/approve-password-reset/<int:request_id>', methods=['POST'])
+@master_admin_required
+def approve_password_reset(request_id):
+    new_password = request.form.get('new_password')
+    reset_req = PasswordResetRequest.query.get(request_id)
+    
+    if reset_req and len(new_password) >= 8:
+        reset_req.status = 'Resolved'
+        reset_req.resolved_by_master_admin_id = session['master_admin_id']
+        reset_req.resolved_at = datetime.utcnow()
+        
+        user = reset_req.user
+        user.set_password(new_password)
+        
+        db.session.commit()
+        flash('Password reset completed!', 'success')
+    else:
+        flash('Invalid request or password!', 'error')
+    
+    return redirect(url_for('master_admin_dashboard'))
+
+@app.route('/master-admin/maintenance-mode', methods=['POST'])
+@master_admin_required
+def toggle_maintenance_mode():
+    current = get_setting('maintenance_mode', 'false').lower() == 'true'
+    set_setting('maintenance_mode', 'false' if current else 'true')
+    flash('Maintenance mode toggled!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
 
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    users = load_json('users.json')
-    payments = load_json('payments.json')
-    withdrawals = load_json('withdraws.json')
-    packages = load_json('packages.json')
-    ads = load_json('ads.json')
-    ad_views = load_json('ad_views.json')
-    settings = load_json('settings.json')
+    users = User.query.all()
+    payments = Payment.query.all()
+    withdrawals = Withdrawal.query.all()
+    packages = Package.query.all()
+    ads = Ad.query.all()
+    payment_methods = PaymentMethod.query.all()
     
     stats = {
         'total_users': len(users),
-        'total_payments': len([p for p in payments if p['status'] == 'Approved']),
-        'total_withdrawals': len([w for w in withdrawals if w['status'] == 'Approved']),
-        'pending_payments': len([p for p in payments if p['status'] == 'Pending']),
-        'pending_withdrawals': len([w for w in withdrawals if w['status'] == 'Pending']),
-        'total_ad_views': len(ad_views),
-        'total_ad_payouts': sum(av['reward'] for av in ad_views),
-        'total_ads': len(ads)
+        'total_payments': len([p for p in payments if p.status == 'Approved']),
+        'total_withdrawals': len([w for w in withdrawals if w.status == 'Approved']),
+        'pending_payments': len([p for p in payments if p.status == 'Pending']),
+        'pending_withdrawals': len([w for w in withdrawals if w.status == 'Pending'])
     }
     
     return render_template('admin_dashboard.html', 
-                         users=users, 
-                         payments=payments, 
+                         users=users,
+                         payments=payments,
                          withdrawals=withdrawals,
                          packages=packages,
-                         stats=stats,
-                         settings=settings)
+                         ads=ads,
+                         payment_methods=payment_methods,
+                         stats=stats)
 
 @app.route('/admin/approve-payment/<int:payment_id>')
 @admin_required
 def approve_payment(payment_id):
-    payments = load_json('payments.json')
-    payment = next((p for p in payments if p['id'] == payment_id), None)
+    payment = Payment.query.get(payment_id)
     
-    if payment and payment['status'] == 'Pending':
-        payment['status'] = 'Approved'
-        save_json('payments.json', payments)
+    if payment and payment.status == 'Pending':
+        payment.status = 'Approved'
+        payment.approved_by_admin_id = session.get('admin_id')
         
-        settings = load_json('settings.json')
-        commission_rate = settings.get('commission_percentage', 50) / 100
+        commission_rate = float(get_setting('commission_percentage', 50)) / 100
+        user = payment.user
         
-        users = load_json('users.json')
-        buyer = next((u for u in users if u['id'] == payment['user_id']), None)
-        
-        if buyer and buyer.get('referred_by'):
-            commission = payment['amount'] * commission_rate
-            update_user_wallet(buyer['referred_by'], commission)
+        if user.referred_by:
+            commission = payment.amount * commission_rate
+            referrer = User.query.get(user.referred_by)
+            referrer.wallet_balance += commission
             flash(f'Payment approved! Commission of {commission} PKR credited to referrer.', 'success')
         else:
             flash('Payment approved!', 'success')
+        
+        db.session.commit()
     
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/approve-payment-screenshot/<int:payment_id>')
+@admin_required
+def view_payment_screenshot(payment_id):
+    payment = Payment.query.get(payment_id)
+    if payment and payment.screenshot:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], payment.screenshot)
+    return "File not found", 404
 
 @app.route('/admin/reject-payment/<int:payment_id>')
 @admin_required
 def reject_payment(payment_id):
-    payments = load_json('payments.json')
-    payment = next((p for p in payments if p['id'] == payment_id), None)
-    
+    payment = Payment.query.get(payment_id)
     if payment:
-        payment['status'] = 'Rejected'
-        save_json('payments.json', payments)
+        payment.status = 'Rejected'
+        db.session.commit()
         flash('Payment rejected!', 'success')
-    
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/approve-withdrawal/<int:withdrawal_id>')
 @admin_required
 def approve_withdrawal(withdrawal_id):
-    withdrawals = load_json('withdraws.json')
-    withdrawal = next((w for w in withdrawals if w['id'] == withdrawal_id), None)
+    withdrawal = Withdrawal.query.get(withdrawal_id)
     
-    if withdrawal and withdrawal['status'] == 'Pending':
-        user = get_user_by_id(withdrawal['user_id'])
+    if withdrawal and withdrawal.status == 'Pending':
+        user = withdrawal.user
         
-        if user['wallet'] >= withdrawal['amount']:
-            withdrawal['status'] = 'Approved'
-            save_json('withdraws.json', withdrawals)
-            
-            update_user_wallet(withdrawal['user_id'], -withdrawal['amount'])
+        if user.wallet_balance >= withdrawal.amount:
+            withdrawal.status = 'Approved'
+            withdrawal.approved_by_admin_id = session.get('admin_id')
+            user.wallet_balance -= withdrawal.amount
+            db.session.commit()
             flash('Withdrawal approved and amount deducted from wallet!', 'success')
         else:
             flash('User has insufficient balance!', 'error')
@@ -440,208 +576,291 @@ def approve_withdrawal(withdrawal_id):
 @app.route('/admin/reject-withdrawal/<int:withdrawal_id>')
 @admin_required
 def reject_withdrawal(withdrawal_id):
-    withdrawals = load_json('withdraws.json')
-    withdrawal = next((w for w in withdrawals if w['id'] == withdrawal_id), None)
-    
+    withdrawal = Withdrawal.query.get(withdrawal_id)
     if withdrawal:
-        withdrawal['status'] = 'Rejected'
-        save_json('withdraws.json', withdrawals)
+        withdrawal.status = 'Rejected'
+        db.session.commit()
         flash('Withdrawal rejected!', 'success')
-    
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/adjust-wallet/<int:user_id>', methods=['POST'])
+@app.route('/admin/mark-invested/<int:user_id>')
 @admin_required
-def adjust_wallet(user_id):
-    amount = float(request.form.get('amount'))
-    update_user_wallet(user_id, amount)
-    flash(f'Wallet adjusted by {amount} PKR!', 'success')
+def mark_invested(user_id):
+    user = User.query.get(user_id)
+    if user:
+        user.is_invested = True
+        db.session.commit()
+        flash('User marked as invested!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/update-settings', methods=['POST'])
+@app.route('/admin/view-user-tree/<int:user_id>')
 @admin_required
-def update_settings():
-    settings = load_json('settings.json')
+def view_user_tree(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found!', 'error')
+        return redirect(url_for('admin_dashboard'))
     
-    settings['commission_percentage'] = float(request.form.get('commission_percentage'))
-    settings['min_withdrawal'] = float(request.form.get('min_withdrawal'))
-    settings['ads_enabled'] = request.form.get('ads_enabled') == 'on'
-    settings['whatsapp_contact'] = request.form.get('whatsapp_contact', '')
-    settings['email_contact'] = request.form.get('email_contact', '')
+    def build_tree(u, depth=0):
+        if depth > 10:
+            return None
+        return {
+            'id': u.id,
+            'name': u.full_name,
+            'email': u.email,
+            'is_invested': u.is_invested,
+            'wallet': u.wallet_balance,
+            'children': [build_tree(ref, depth+1) for ref in u.referred_users]
+        }
     
-    save_json('settings.json', settings)
-    flash('Settings updated successfully!', 'success')
+    tree = build_tree(user)
+    return render_template('user_tree.html', user=user, tree=tree)
+
+@app.route('/admin/profile-updates')
+@admin_required
+def profile_updates():
+    pending_updates = ProfileUpdateRequest.query.filter_by(status='Pending').all()
+    return render_template('profile_updates.html', updates=pending_updates)
+
+@app.route('/admin/approve-profile-update/<int:update_id>')
+@admin_required
+def approve_profile_update(update_id):
+    update_req = ProfileUpdateRequest.query.get(update_id)
+    
+    if update_req:
+        user = update_req.user
+        update_req.status = 'Approved'
+        update_req.approved_by_admin_id = session.get('admin_id')
+        
+        if update_req.update_type == 'phone':
+            user.phone = update_req.new_value
+        elif update_req.update_type == 'city':
+            user.city = update_req.new_value
+        elif update_req.update_type == 'address':
+            user.address = update_req.new_value
+        elif update_req.update_type == 'password':
+            user.set_password(update_req.new_value)
+        
+        db.session.commit()
+        flash('Profile update approved!', 'success')
+    
+    return redirect(url_for('profile_updates'))
+
+@app.route('/admin/reject-profile-update/<int:update_id>')
+@admin_required
+def reject_profile_update(update_id):
+    update_req = ProfileUpdateRequest.query.get(update_id)
+    if update_req:
+        update_req.status = 'Rejected'
+        db.session.commit()
+        flash('Profile update rejected!', 'success')
+    return redirect(url_for('profile_updates'))
+
+@app.route('/admin/manage-payment-methods', methods=['POST'])
+@admin_required
+def manage_payment_methods():
+    action = request.form.get('action')
+    
+    if action == 'add':
+        new_method = PaymentMethod(
+            type=request.form.get('type'),
+            account_number=request.form.get('account_number'),
+            account_name=request.form.get('account_name'),
+            bank_name=request.form.get('bank_name', '')
+        )
+        db.session.add(new_method)
+        flash('Payment method added!', 'success')
+    
+    elif action == 'edit':
+        method = PaymentMethod.query.get(int(request.form.get('method_id')))
+        if method:
+            method.type = request.form.get('type')
+            method.account_number = request.form.get('account_number')
+            method.account_name = request.form.get('account_name')
+            method.bank_name = request.form.get('bank_name', '')
+            flash('Payment method updated!', 'success')
+    
+    elif action == 'delete':
+        method = PaymentMethod.query.get(int(request.form.get('method_id')))
+        if method:
+            db.session.delete(method)
+            flash('Payment method deleted!', 'success')
+    
+    db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/manage-packages', methods=['POST'])
 @admin_required
 def manage_packages():
     action = request.form.get('action')
-    packages = load_json('packages.json')
     
     if action == 'add':
-        new_package = {
-            'id': max([p['id'] for p in packages], default=0) + 1,
-            'name': request.form.get('name'),
-            'price': float(request.form.get('price'))
-        }
-        packages.append(new_package)
-        flash('Package added successfully!', 'success')
+        new_package = Package(
+            name=request.form.get('name'),
+            price=float(request.form.get('price')),
+            description=request.form.get('description', '')
+        )
+        db.session.add(new_package)
+        flash('Package added!', 'success')
     
     elif action == 'edit':
-        package_id = int(request.form.get('package_id'))
-        package = next((p for p in packages if p['id'] == package_id), None)
+        package = Package.query.get(int(request.form.get('package_id')))
         if package:
-            package['name'] = request.form.get('name')
-            package['price'] = float(request.form.get('price'))
-            flash('Package updated successfully!', 'success')
+            package.name = request.form.get('name')
+            package.price = float(request.form.get('price'))
+            package.description = request.form.get('description', '')
+            flash('Package updated!', 'success')
     
     elif action == 'delete':
-        package_id = int(request.form.get('package_id'))
-        packages = [p for p in packages if p['id'] != package_id]
-        flash('Package deleted successfully!', 'success')
+        package = Package.query.get(int(request.form.get('package_id')))
+        if package:
+            db.session.delete(package)
+            flash('Package deleted!', 'success')
     
-    save_json('packages.json', packages)
+    db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/manage-payment-methods', methods=['POST'])
-@admin_required
-def manage_payment_methods():
-    action = request.form.get('action')
-    settings = load_json('settings.json')
-    
-    if 'payment_methods' not in settings:
-        settings['payment_methods'] = []
-    
-    payment_methods = settings['payment_methods']
-    
-    if action == 'add':
-        new_method = {
-            'id': max([pm['id'] for pm in payment_methods], default=0) + 1,
-            'type': request.form.get('type'),
-            'account_number': request.form.get('account_number'),
-            'account_name': request.form.get('account_name')
-        }
-        if request.form.get('bank_name'):
-            new_method['bank_name'] = request.form.get('bank_name')
-        payment_methods.append(new_method)
-        flash('Payment method added successfully!', 'success')
-    
-    elif action == 'edit':
-        method_id = int(request.form.get('method_id'))
-        method = next((pm for pm in payment_methods if pm['id'] == method_id), None)
-        if method:
-            method['type'] = request.form.get('type')
-            method['account_number'] = request.form.get('account_number')
-            method['account_name'] = request.form.get('account_name')
-            if request.form.get('bank_name'):
-                method['bank_name'] = request.form.get('bank_name')
-            flash('Payment method updated successfully!', 'success')
-    
-    elif action == 'delete':
-        method_id = int(request.form.get('method_id'))
-        payment_methods = [pm for pm in payment_methods if pm['id'] != method_id]
-        settings['payment_methods'] = payment_methods
-        flash('Payment method deleted successfully!', 'success')
-    
-    settings['payment_methods'] = payment_methods
-    save_json('settings.json', settings)
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/manage-ads')
+@app.route('/admin/manage-ads', methods=['GET', 'POST'])
 @admin_required
 def manage_ads():
-    ads = load_json('ads.json')
-    ad_views = load_json('ad_views.json')
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'add':
+            ad_type = request.form.get('ad_type')
+            media_file = None
+            link = None
+            
+            if ad_type in ['video', 'image']:
+                if 'media_file' in request.files:
+                    file = request.files['media_file']
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(f"ad_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                        os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
+                        file.save(os.path.join(app.config['ADS_FOLDER'], filename))
+                        media_file = filename
+            elif ad_type == 'link':
+                link = request.form.get('link')
+            
+            new_ad = Ad(
+                title=request.form.get('title'),
+                type=ad_type,
+                media_file=media_file,
+                link=link,
+                reward=float(request.form.get('reward'))
+            )
+            db.session.add(new_ad)
+            flash('Ad added!', 'success')
+        
+        elif action == 'delete':
+            ad = Ad.query.get(int(request.form.get('ad_id')))
+            if ad:
+                db.session.delete(ad)
+                flash('Ad deleted!', 'success')
+        
+        db.session.commit()
     
-    ad_stats = []
-    for ad in ads:
-        views = len([av for av in ad_views if av['ad_id'] == ad['id']])
-        ad_stats.append({**ad, 'views': views})
-    
-    return render_template('manage_ads.html', ads=ad_stats)
+    ads = Ad.query.all()
+    return render_template('manage_ads.html', ads=ads)
 
-@app.route('/admin/add-ad', methods=['POST'])
+@app.route('/admin/manage-announcements', methods=['GET', 'POST'])
 @admin_required
-def add_ad():
-    title = request.form.get('title')
-    description = request.form.get('description')
-    reward = float(request.form.get('reward'))
-    ad_type = request.form.get('ad_type')
+def manage_announcements():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'add':
+            ann_type = request.form.get('announcement_type')
+            media_file = None
+            
+            if ann_type in ['image', 'video']:
+                if 'media_file' in request.files:
+                    file = request.files['media_file']
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(f"ann_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                        os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
+                        file.save(os.path.join(app.config['ADS_FOLDER'], filename))
+                        media_file = filename
+            
+            new_ann = Announcement(
+                type=ann_type,
+                content=request.form.get('content'),
+                media_file=media_file
+            )
+            db.session.add(new_ann)
+            flash('Announcement added!', 'success')
+        
+        db.session.commit()
     
-    ads = load_json('ads.json')
+    announcements = Announcement.query.all()
+    return render_template('manage_announcements.html', announcements=announcements)
+
+@app.route('/admin/toggle-announcement/<int:ann_id>')
+@admin_required
+def toggle_announcement(ann_id):
+    ann = Announcement.query.get(ann_id)
+    if ann:
+        ann.is_active = not ann.is_active
+        db.session.commit()
+        flash('Announcement toggled!', 'success')
+    return redirect(url_for('manage_announcements'))
+
+@app.route('/admin/manage-guide-videos', methods=['GET', 'POST'])
+@admin_required
+def manage_guide_videos():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'add':
+            new_video = GuideVideo(
+                title=request.form.get('title'),
+                video_url=request.form.get('video_url')
+            )
+            db.session.add(new_video)
+            db.session.commit()
+            flash('Guide video added!', 'success')
+        
+        elif action == 'delete':
+            video = GuideVideo.query.get(int(request.form.get('video_id')))
+            if video:
+                db.session.delete(video)
+                db.session.commit()
+                flash('Guide video deleted!', 'success')
     
-    media_file = None
-    link = None
+    videos = GuideVideo.query.all()
+    return render_template('manage_guide_videos.html', videos=videos)
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@admin_required
+def admin_settings():
+    if request.method == 'POST':
+        set_setting('commission_percentage', request.form.get('commission_percentage'))
+        set_setting('min_withdrawal', request.form.get('min_withdrawal'))
+        set_setting('ads_enabled', 'true' if request.form.get('ads_enabled') else 'false')
+        flash('Settings updated!', 'success')
+        return redirect(url_for('admin_settings'))
     
-    if ad_type in ['video', 'image']:
-        if 'media_file' in request.files:
-            file = request.files['media_file']
-            if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(f"ad_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
-                file.save(os.path.join(app.config['ADS_FOLDER'], filename))
-                media_file = filename
-    elif ad_type == 'link':
-        link = request.form.get('link')
-    
-    new_ad = {
-        'id': max([a['id'] for a in ads], default=0) + 1,
-        'title': title,
-        'description': description,
-        'reward': reward,
-        'type': ad_type,
-        'media_file': media_file,
-        'link': link,
-        'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    settings = {
+        'commission_percentage': get_setting('commission_percentage', 50),
+        'min_withdrawal': get_setting('min_withdrawal', 225),
+        'ads_enabled': get_setting('ads_enabled', 'true').lower() == 'true'
     }
     
-    ads.append(new_ad)
-    save_json('ads.json', ads)
-    
-    flash('Ad added successfully!', 'success')
-    return redirect(url_for('manage_ads'))
+    return render_template('admin_settings.html', settings=settings)
 
-@app.route('/admin/delete-ad/<int:ad_id>')
-@admin_required
-def delete_ad(ad_id):
-    ads = load_json('ads.json')
-    ads = [a for a in ads if a['id'] != ad_id]
-    save_json('ads.json', ads)
-    
-    flash('Ad deleted successfully!', 'success')
-    return redirect(url_for('manage_ads'))
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('404.html'), 404
 
-@app.route('/admin/change-password', methods=['GET', 'POST'])
-@admin_required
-def change_admin_password():
-    if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
-        
-        settings = load_json('settings.json')
-        
-        if not check_password_hash(settings['admin_password'], current_password):
-            flash('Current password is incorrect!', 'error')
-            return redirect(url_for('change_admin_password'))
-        
-        if new_password != confirm_password:
-            flash('New passwords do not match!', 'error')
-            return redirect(url_for('change_admin_password'))
-        
-        settings['admin_password'] = generate_password_hash(new_password)
-        save_json('settings.json', settings)
-        
-        flash('Admin password changed successfully!', 'success')
-        return redirect(url_for('admin_dashboard'))
-    
-    return render_template('change_admin_password.html')
-
-@app.route('/static/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+@app.errorhandler(500)
+def server_error(error):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
+    with app.app_context():
+        db.create_all()
+        init_default_settings()
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
+    
     app.run(host='0.0.0.0', port=5000, debug=True)
