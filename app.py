@@ -930,6 +930,23 @@ def admin_settings():
     
     return render_template('admin_settings.html', settings=settings)
 
+@app.route('/admin/adjust-wallet/<int:user_id>', methods=['POST'])
+@admin_required
+def adjust_wallet(user_id):
+    user = User.query.get(user_id)
+    if user:
+        try:
+            amount = float(request.form.get('amount', 0))
+            user.wallet_balance += amount
+            db.session.commit()
+            if amount >= 0:
+                flash(f'Added {amount} PKR to {user.full_name}\'s wallet!', 'success')
+            else:
+                flash(f'Deducted {abs(amount)} PKR from {user.full_name}\'s wallet!', 'success')
+        except ValueError:
+            flash('Invalid amount!', 'error')
+    return redirect(url_for('admin_dashboard'))
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('404.html'), 404
