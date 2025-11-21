@@ -28,8 +28,27 @@
             
             <div>
                 <label class="block text-white mb-2">Password</label>
-                <input type="password" name="password" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white placeholder-white/50" placeholder="Enter your password">
+                <div class="relative">
+                    <input type="password" name="password" id="password" required class="w-full px-4 py-2 pr-12 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white placeholder-white/50" placeholder="Enter your password">
+                    <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white cursor-pointer text-xl">
+                        <span id="toggleIcon">👁️</span>
+                    </button>
+                </div>
             </div>
+
+            <script>
+                function togglePassword() {
+                    const input = document.getElementById('password');
+                    const icon = document.getElementById('toggleIcon');
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.textContent = '🙈';
+                    } else {
+                        input.type = 'password';
+                        icon.textContent = '👁️';
+                    }
+                }
+            </script>
             
             <button type="submit" class="w-full bg-white text-purple-600 py-3 rounded-lg font-bold hover:bg-purple-100 transition">
                 Login
