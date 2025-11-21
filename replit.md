@@ -123,16 +123,37 @@ The admin can manage payment methods that users see when purchasing packages:
 - Glass-morphism effects
 
 ## Running the Application
+
+### Local Development
 The Flask server runs on port 5000:
 ```bash
 python app.py
 ```
 Access at: http://localhost:5000
 
+### Deployment to Render
+For step-by-step deployment instructions with PostgreSQL database, see **DEPLOYMENT_GUIDE.md**
+
+Quick Summary:
+1. Create `requirements.txt`, `Procfile`, `runtime.txt` ✅ (Already created)
+2. Push code to GitHub
+3. Create PostgreSQL database on Render
+4. Deploy Flask app on Render
+5. Add environment variables
+6. Initialize database
+7. Access your live app!
+
 ## Recent Changes
-- 2025-11-13: Initial project creation with all features implemented
-- Payment method management system added with admin controls
-- All templates created with responsive design
+- 2025-11-21: Completed migration from JSON to PostgreSQL database
+- Enhanced registration with full_name, phone, city, address fields
+- Master Admin system implemented with full authority over admins
+- Profile update requests with admin approval workflow
+- Referral tree viewing for users and admins
+- Announcements and guide videos system added
+- Login history tracking implemented
+- Password reset system (Master Admin controlled)
+- Created deployment files for Render: Procfile, runtime.txt, requirements.txt
+- All templates updated with responsive design
 - Ad watching system with daily limits implemented
 - Referral commission system with automatic wallet updates
 
