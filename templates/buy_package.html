@@ -73,12 +73,23 @@
                     <p class="text-sm text-white/60 mt-1">Upload payment proof (Max 5MB)</p>
                 </div>
 
-                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-green-600 hover:to-green-700 transition shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 md:py-3">
-                    ✓ Submit Payment
+                <button type="submit" class="w-full bg-green-600 text-white py-4 px-6 rounded-xl font-bold text-lg border-2 border-green-400 hover:bg-green-700 hover:border-green-300 transition shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 uppercase tracking-wider md:py-4 md:text-base">
+                    ✓ SUBMIT PAYMENT
                 </button>
             </form>
         </div>
     </div>
+
+    <style>
+        select option {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 10px;
+        }
+        select option:hover {
+            background-color: #6d28d9;
+        }
+    </style>
 
     <script>
         const paymentMethodSelect = document.getElementById('payment_method');
