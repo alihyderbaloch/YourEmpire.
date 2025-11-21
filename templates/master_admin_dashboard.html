@@ -90,6 +90,37 @@
             </div>
         </div>
 
+        <!-- Change Master Admin Password -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">🔐 Change Master Admin Password</h2>
+            <form method="POST" action="{{ url_for('change_master_admin_password') }}" class="max-w-md">
+                <input type="password" name="current_password" placeholder="Current Password" required class="w-full border p-2 rounded mb-2">
+                <input type="password" name="new_password" placeholder="New Password (8+ chars)" required class="w-full border p-2 rounded mb-2">
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required class="w-full border p-2 rounded mb-2">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Password</button>
+            </form>
+        </div>
+
+        <!-- Change User Password -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">👤 Change User Password</h2>
+            <form method="POST" action="{{ url_for('admin_change_user_password') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="email" name="user_email" placeholder="User Email" required class="border p-2 rounded">
+                <input type="password" name="new_password" placeholder="New Password (8+ chars)" required class="border p-2 rounded">
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Set Password</button>
+            </form>
+        </div>
+
+        <!-- Change Admin Password -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">🔑 Change Admin Password</h2>
+            <form method="POST" action="{{ url_for('admin_change_admin_password') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="email" name="admin_email" placeholder="Admin Email" required class="border p-2 rounded">
+                <input type="password" name="new_password" placeholder="New Password (8+ chars)" required class="border p-2 rounded">
+                <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Set Password</button>
+            </form>
+        </div>
+
         <!-- Maintenance Mode -->
         <div class="bg-white p-6 rounded-lg shadow">
             <h2 class="text-2xl font-bold mb-4 text-purple-900">System Control</h2>
