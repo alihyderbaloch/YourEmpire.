@@ -575,6 +575,14 @@ def admin_dashboard():
     settings_list = Settings.query.all()
     settings = {s.key: s.value for s in settings_list}
     
+    # Add referrer code to each user
+    for user in users:
+        if user.referred_by:
+            referrer = User.query.get(user.referred_by)
+            user.referrer_code = referrer.referral_code if referrer else None
+        else:
+            user.referrer_code = None
+    
     stats = {
         'total_users': len(users),
         'total_payments': len([p for p in payments if p.status == 'Approved']),
