@@ -571,12 +571,17 @@ def admin_dashboard():
     ads = Ad.query.all()
     payment_methods = PaymentMethod.query.all()
     
+    # Get all settings
+    settings_list = Settings.query.all()
+    settings = {s.key: s.value for s in settings_list}
+    
     stats = {
         'total_users': len(users),
         'total_payments': len([p for p in payments if p.status == 'Approved']),
         'total_withdrawals': len([w for w in withdrawals if w.status == 'Approved']),
         'pending_payments': len([p for p in payments if p.status == 'Pending']),
-        'pending_withdrawals': len([w for w in withdrawals if w.status == 'Pending'])
+        'pending_withdrawals': len([w for w in withdrawals if w.status == 'Pending']),
+        'total_ad_views': len(AdView.query.all())
     }
     
     return render_template('admin_dashboard.html', 
@@ -586,6 +591,7 @@ def admin_dashboard():
                          packages=packages,
                          ads=ads,
                          payment_methods=payment_methods,
+                         settings=settings,
                          stats=stats)
 
 @app.route('/admin/approve-payment/<int:payment_id>')
