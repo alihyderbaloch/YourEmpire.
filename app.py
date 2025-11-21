@@ -489,6 +489,78 @@ def toggle_maintenance_mode():
     flash('Maintenance mode toggled!', 'success')
     return redirect(url_for('master_admin_dashboard'))
 
+@app.route('/master-admin/change-master-password', methods=['POST'])
+@master_admin_required
+def change_master_admin_password():
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    master_admin = MasterAdmin.query.get(session['master_admin_id'])
+    
+    if not master_admin:
+        flash('Master Admin not found!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    if not master_admin.check_password(current_password):
+        flash('Current password is incorrect!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    if len(new_password) < 8:
+        flash('Password must be at least 8 characters!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    if new_password != confirm_password:
+        flash('Passwords do not match!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    master_admin.set_password(new_password)
+    db.session.commit()
+    flash('Master Admin password changed successfully!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
+
+@app.route('/master-admin/change-user-password', methods=['POST'])
+@master_admin_required
+def admin_change_user_password():
+    user_email = request.form.get('user_email')
+    new_password = request.form.get('new_password')
+    
+    if len(new_password) < 8:
+        flash('Password must be at least 8 characters!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    user = User.query.filter_by(email=user_email).first()
+    
+    if not user:
+        flash('User not found!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    user.set_password(new_password)
+    db.session.commit()
+    flash(f'Password changed for user {user_email}!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
+
+@app.route('/master-admin/change-admin-password', methods=['POST'])
+@master_admin_required
+def admin_change_admin_password():
+    admin_email = request.form.get('admin_email')
+    new_password = request.form.get('new_password')
+    
+    if len(new_password) < 8:
+        flash('Password must be at least 8 characters!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    admin = Admin.query.filter_by(email=admin_email).first()
+    
+    if not admin:
+        flash('Admin not found!', 'error')
+        return redirect(url_for('master_admin_dashboard'))
+    
+    admin.set_password(new_password)
+    db.session.commit()
+    flash(f'Password changed for admin {admin_email}!', 'success')
+    return redirect(url_for('master_admin_dashboard'))
+
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
