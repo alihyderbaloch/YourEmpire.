@@ -1099,14 +1099,23 @@ def not_found(error):
 def server_error(error):
     return render_template('500.html'), 500
 
-with app.app_context():
-    try:
+@app.before_request
+def initialize_database():
+    if not hasattr(app, 'db_initialized'):
+        try:
+            with app.app_context():
+                db.create_all()
+                init_default_settings()
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
+            app.db_initialized = True
+        except Exception as e:
+            print(f"Warning: Database initialization error: {e}")
+
+if __name__ == '__main__':
+    with app.app_context():
         db.create_all()
         init_default_settings()
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
-    except Exception as e:
-        print(f"Warning: Database initialization error: {e}")
-
-if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
