@@ -138,36 +138,15 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        user = User.query.filter_by(email=email, is_active=True).first()
-        
-        if user and user.check_password(password):
-            session['user_id'] = user.id
-            session['user_name'] = user.full_name
-            login_log = LoginHistory(user_id=user.id, login_type='user', ip_address=request.remote_addr)
-            db.session.add(login_log)
-            db.session.commit()
-            flash(f'Welcome back, {user.full_name}!', 'success')
-            return redirect(url_for('user_dashboard'))
-        else:
-            flash('Invalid email or password!', 'error')
-            return redirect(url_for('login'))
-    
-    return render_template('login.html')
-
-@app.route('/admin-login', methods=['GET', 'POST'])
-def admin_login():
     maintenance = get_setting('maintenance_mode', 'false').lower() == 'true'
-    if maintenance:
+    if maintenance and request.method == 'POST':
         return render_template('maintenance.html'), 503
     
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         
+        # Check Master Admin first
         master_admin = MasterAdmin.query.filter_by(email=email).first()
         if master_admin and master_admin.check_password(password):
             session['master_admin_id'] = master_admin.id
@@ -178,6 +157,7 @@ def admin_login():
             flash('Master Admin login successful!', 'success')
             return redirect(url_for('master_admin_dashboard'))
         
+        # Check Admin
         admin = Admin.query.filter_by(email=email, is_active=True).first()
         if admin and admin.check_password(password):
             session['admin_id'] = admin.id
@@ -188,9 +168,26 @@ def admin_login():
             flash('Admin login successful!', 'success')
             return redirect(url_for('admin_dashboard'))
         
-        flash('Invalid admin credentials!', 'error')
+        # Check Regular User
+        user = User.query.filter_by(email=email, is_active=True).first()
+        if user and user.check_password(password):
+            session['user_id'] = user.id
+            session['user_name'] = user.full_name
+            login_log = LoginHistory(user_id=user.id, login_type='user', ip_address=request.remote_addr)
+            db.session.add(login_log)
+            db.session.commit()
+            flash(f'Welcome back, {user.full_name}!', 'success')
+            return redirect(url_for('user_dashboard'))
+        
+        flash('Invalid email or password!', 'error')
+        return redirect(url_for('login'))
     
-    return render_template('admin_login.html')
+    return render_template('login.html')
+
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    # Redirect to unified login page
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
