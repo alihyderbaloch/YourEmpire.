@@ -716,48 +716,42 @@ def ad_analytics():
     summary = {'total_ads': len(ads), 'total_views': 0, 'total_rewards': 0, 'active_users': 0}
     
     for ad in ads:
-        views = AdView.query.filter_by(ad_id=ad.id).all()
-        total_views = len(views)
-        total_paid = total_views * ad.reward
+        # Count UNIQUE user-ad combinations (each user can view once per day)
+        unique_viewers = db.session.query(AdView.user_id).filter_by(ad_id=ad.id).distinct().count()
+        total_paid = unique_viewers * ad.reward
         
         ads_data.append({
             'id': ad.id,
             'title': ad.title,
             'type': ad.type,
-            'views': total_views,
+            'views': unique_viewers,
             'reward': ad.reward,
             'total_paid': total_paid,
             'is_active': ad.is_active
         })
         
-        summary['total_views'] += total_views
+        summary['total_views'] += unique_viewers
         summary['total_rewards'] += total_paid
     
     # Get unique users who watched ads
     unique_viewers = db.session.query(AdView.user_id).distinct().count()
     summary['active_users'] = unique_viewers
     
-    # Get viewer details
+    # Get viewer details - count unique user-ad pairs only
     viewers_data = []
-    all_views = AdView.query.all()
+    unique_views = db.session.query(AdView.user_id, AdView.ad_id, db.func.max(AdView.viewed_at).label('last_viewed')).group_by(AdView.user_id, AdView.ad_id).all()
     
-    views_by_user_ad = {}
-    for view in all_views:
-        key = (view.user_id, view.ad_id)
-        if key not in views_by_user_ad:
-            views_by_user_ad[key] = {'count': 0, 'last_viewed': view.viewed_at, 'user': view.user, 'ad': view.ad}
-        views_by_user_ad[key]['count'] += 1
-        if view.viewed_at > views_by_user_ad[key]['last_viewed']:
-            views_by_user_ad[key]['last_viewed'] = view.viewed_at
-    
-    for (user_id, ad_id), data in views_by_user_ad.items():
-        viewers_data.append({
-            'ad_title': data['ad'].title,
-            'user_name': data['user'].full_name,
-            'view_count': data['count'],
-            'reward_earned': data['count'] * data['ad'].reward,
-            'last_viewed': data['last_viewed']
-        })
+    for view in unique_views:
+        user = User.query.get(view.user_id)
+        ad = Ad.query.get(view.ad_id)
+        if user and ad:
+            viewers_data.append({
+                'ad_title': ad.title,
+                'user_name': user.full_name,
+                'view_count': 1,
+                'reward_earned': ad.reward,
+                'last_viewed': view.last_viewed
+            })
     
     return render_template('ad_analytics.html', ads_data=ads_data, viewers_data=viewers_data, summary=summary)
 
