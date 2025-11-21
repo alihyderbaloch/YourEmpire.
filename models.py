@@ -129,6 +129,8 @@ class Ad(db.Model):
     title = db.Column(db.String(255), nullable=False)
     type = db.Column(db.String(50), nullable=False)  # video, image, link
     media_file = db.Column(db.String(255), nullable=True)
+    media_data = db.Column(db.LargeBinary, nullable=True)
+    media_mime_type = db.Column(db.String(100), nullable=True)
     link = db.Column(db.String(255), nullable=True)
     reward = db.Column(db.Float, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
@@ -159,6 +161,8 @@ class Announcement(db.Model):
     type = db.Column(db.String(50), nullable=False)  # text, image, video
     content = db.Column(db.Text, nullable=False)
     media_file = db.Column(db.String(255), nullable=True)
+    media_data = db.Column(db.LargeBinary, nullable=True)
+    media_mime_type = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

@@ -925,29 +925,29 @@ def manage_ads():
         
         if action == 'add':
             ad_type = request.form.get('ad_type')
-            media_file = None
+            media_data = None
+            media_mime_type = None
             link = None
             
             if ad_type in ['video', 'image']:
                 if 'media_file' in request.files:
                     file = request.files['media_file']
                     if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(f"ad_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
-                        os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
-                        file.save(os.path.join(app.config['ADS_FOLDER'], filename))
-                        media_file = filename
+                        media_data = file.read()
+                        media_mime_type = file.content_type
             elif ad_type == 'link':
                 link = request.form.get('link')
             
             new_ad = Ad(
                 title=request.form.get('title'),
                 type=ad_type,
-                media_file=media_file,
+                media_data=media_data,
+                media_mime_type=media_mime_type,
                 link=link,
                 reward=float(request.form.get('reward'))
             )
             db.session.add(new_ad)
-            flash('Ad added!', 'success')
+            flash('Ad added! (Stored permanently in database)', 'success')
         
         elif action == 'delete':
             ad = Ad.query.get(int(request.form.get('ad_id')))
@@ -960,6 +960,21 @@ def manage_ads():
     ads = Ad.query.all()
     return render_template('manage_ads.html', ads=ads)
 
+@app.route('/ad-media/<int:ad_id>')
+def get_ad_media(ad_id):
+    ad = Ad.query.get(ad_id)
+    if ad and ad.media_data:
+        return send_from_directory('.', ad.media_data, mimetype=ad.media_mime_type or 'application/octet-stream')
+    return '', 404
+
+@app.route('/ad-media-inline/<int:ad_id>')
+def get_ad_media_inline(ad_id):
+    ad = Ad.query.get(ad_id)
+    if ad and ad.media_data:
+        from flask import Response
+        return Response(ad.media_data, mimetype=ad.media_mime_type or 'application/octet-stream')
+    return '', 404
+
 @app.route('/admin/manage-announcements', methods=['GET', 'POST'])
 @admin_required
 def manage_announcements():
@@ -968,24 +983,24 @@ def manage_announcements():
         
         if action == 'add':
             ann_type = request.form.get('announcement_type')
-            media_file = None
+            media_data = None
+            media_mime_type = None
             
             if ann_type in ['image', 'video']:
                 if 'media_file' in request.files:
                     file = request.files['media_file']
                     if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(f"ann_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
-                        os.makedirs(app.config['ADS_FOLDER'], exist_ok=True)
-                        file.save(os.path.join(app.config['ADS_FOLDER'], filename))
-                        media_file = filename
+                        media_data = file.read()
+                        media_mime_type = file.content_type
             
             new_ann = Announcement(
                 type=ann_type,
                 content=request.form.get('content'),
-                media_file=media_file
+                media_data=media_data,
+                media_mime_type=media_mime_type
             )
             db.session.add(new_ann)
-            flash('Announcement added!', 'success')
+            flash('Announcement added! (Stored permanently in database)', 'success')
         
         elif action == 'delete':
             ann = Announcement.query.get(int(request.form.get('ann_id')))
@@ -997,6 +1012,14 @@ def manage_announcements():
     
     announcements = Announcement.query.all()
     return render_template('manage_announcements.html', announcements=announcements)
+
+@app.route('/announcement-media/<int:ann_id>')
+def get_announcement_media(ann_id):
+    ann = Announcement.query.get(ann_id)
+    if ann and ann.media_data:
+        from flask import Response
+        return Response(ann.media_data, mimetype=ann.media_mime_type or 'application/octet-stream')
+    return '', 404
 
 @app.route('/admin/toggle-announcement/<int:ann_id>')
 @admin_required
