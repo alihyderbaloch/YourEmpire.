@@ -38,7 +38,8 @@
 
         <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
             <h3 class="text-2xl font-bold text-white mb-4">Add New Ad</h3>
-            <form method="POST" action="{{ url_for('add_ad') }}" enctype="multipart/form-data" class="space-y-4">
+            <form method="POST" action="{{ url_for('manage_ads') }}" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" name="action" value="add">
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-white mb-2">Ad Title</label>
@@ -52,11 +53,6 @@
                             <option value="link">Download Link</option>
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-white mb-2">Description</label>
-                    <textarea name="description" rows="3" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white"></textarea>
                 </div>
 
                 <div>
@@ -105,7 +101,11 @@
                             <td class="py-2">{{ ad.views }}</td>
                             <td class="py-2 text-sm">{{ ad.created_date }}</td>
                             <td class="py-2">
-                                <a href="{{ url_for('delete_ad', ad_id=ad.id) }}" class="text-red-400 hover:text-red-300" onclick="return confirm('Delete this ad?')">Delete</a>
+                                <form method="POST" action="{{ url_for('manage_ads') }}" style="display:inline;" onsubmit="return confirm('Delete this ad?')">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="ad_id" value="{{ ad.id }}">
+                                    <button type="submit" class="text-red-400 hover:text-red-300">Delete</button>
+                                </form>
                             </td>
                         </tr>
                         {% else %}
