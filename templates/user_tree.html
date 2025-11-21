@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Referral Tree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-gradient-to-r from-purple-900 to-blue-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">User Referral Tree</h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-gray-300">Back</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4">{{ user.full_name }}'s Referral Network</h2>
+            <div class="bg-gray-50 p-4 rounded font-mono text-sm overflow-x-auto">
+                <pre>{{ tree | tojson(indent=2) }}</pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

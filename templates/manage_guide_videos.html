@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Guide Videos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-gradient-to-r from-purple-900 to-blue-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Manage Guide Videos</h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-gray-300">Back</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add Video -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">Add Guide Video</h2>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="add">
+                <div>
+                    <label class="block font-semibold mb-2">Title</label>
+                    <input type="text" name="title" required class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-2">Video URL (YouTube or Direct Link)</label>
+                    <input type="url" name="video_url" required class="w-full border p-2 rounded">
+                </div>
+                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Add Video</button>
+            </form>
+        </div>
+
+        <!-- Videos List -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">Guide Videos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for video in videos %}
+                    <div class="border p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">{{ video.title }}</h3>
+                        <p class="text-sm text-gray-600 mb-3 break-all">{{ video.video_url }}</p>
+                        <form method="POST" action="{{ url_for('manage_guide_videos') }}" style="display:inline;">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="video_id" value="{{ video.id }}">
+                            <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">Delete</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

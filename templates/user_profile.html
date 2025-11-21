@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-gradient-to-r from-purple-900 to-blue-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">My Profile</h1>
+            <div>
+                <a href="{{ url_for('user_dashboard') }}" class="mr-4 hover:text-gray-300">Dashboard</a>
+                <a href="{{ url_for('logout') }}" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Profile Info -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-2xl font-bold mb-4 text-purple-900">Profile Information</h2>
+                <p class="mb-2"><strong>Name:</strong> {{ user.full_name }}</p>
+                <p class="mb-2"><strong>Email:</strong> {{ user.email }}</p>
+                <p class="mb-2"><strong>Phone:</strong> {{ user.phone }}</p>
+                <p class="mb-2"><strong>City:</strong> {{ user.city }}</p>
+                <p class="mb-2"><strong>Referral Code:</strong> <span class="text-purple-600 font-bold">{{ user.referral_code }}</span></p>
+                <p class="mb-2"><strong>Wallet Balance:</strong> <span class="text-green-600 font-bold">PKR {{ user.wallet_balance }}</span></p>
+                <p class="mb-2"><strong>Investment Status:</strong> 
+                    {% if user.is_invested %}
+                        <span class="text-green-600">✓ Invested</span>
+                    {% else %}
+                        <span class="text-red-600">Not Invested</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Update Profile -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-2xl font-bold mb-4 text-purple-900">Request Update</h2>
+                <form method="POST" action="{{ url_for('update_profile') }}" class="space-y-3">
+                    <div>
+                        <label class="block font-semibold mb-1">Update Type</label>
+                        <select name="update_type" required class="w-full border p-2 rounded">
+                            <option value="">Select...</option>
+                            <option value="phone">Phone Number</option>
+                            <option value="city">City</option>
+                            <option value="address">Address</option>
+                            <option value="password">Password</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">New Value</label>
+                        <input type="text" name="new_value" required class="w-full border p-2 rounded" placeholder="Enter new value">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Request Update</button>
+                </form>
+
+                {% if pending_updates %}
+                    <div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded">
+                        <p class="font-semibold">Pending Requests:</p>
+                        {% for update in pending_updates %}
+                            <p class="text-sm">{{ update.update_type }} - Waiting for approval</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Referral Tree -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900">Your Referral Tree</h2>
+            <div class="bg-gray-50 p-4 rounded">
+                <div class="font-mono text-sm whitespace-pre">{{ referral_tree | tojson }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

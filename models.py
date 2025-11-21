@@ -24,7 +24,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    referred_users = db.relationship('User', remote_side=[referred_by], backref='referrer')
+    referred_users = db.relationship('User', remote_side='User.referred_by', backref='referrer')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
