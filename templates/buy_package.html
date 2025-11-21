@@ -47,7 +47,7 @@
                     <label class="block text-white mb-2">Payment Method</label>
                     <select name="payment_method" id="payment_method" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
                         {% for method in payment_methods %}
-                        <option value="{{ method.id }}" data-type="{{ method.type }}" data-account="{{ method.account_number }}" data-name="{{ method.account_name }}" data-bank="{{ method.get('bank_name', '') }}">
+                        <option value="{{ method.id }}" data-type="{{ method.type }}" data-account="{{ method.account_number }}" data-name="{{ method.account_name }}" data-bank="{{ method.bank_name or '' }}">
                             {{ method.type }}
                         </option>
                         {% endfor %}
@@ -73,8 +73,8 @@
                     <p class="text-sm text-white/60 mt-1">Upload payment proof (Max 5MB)</p>
                 </div>
 
-                <button type="submit" class="w-full bg-white text-purple-600 py-3 rounded-lg font-bold hover:bg-purple-100 transition">
-                    Submit Payment
+                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-green-600 hover:to-green-700 transition shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 md:py-3">
+                    ✓ Submit Payment
                 </button>
             </form>
         </div>
