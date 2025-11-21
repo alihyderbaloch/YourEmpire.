@@ -880,6 +880,12 @@ def manage_announcements():
             db.session.add(new_ann)
             flash('Announcement added!', 'success')
         
+        elif action == 'delete':
+            ann = Announcement.query.get(int(request.form.get('ann_id')))
+            if ann:
+                db.session.delete(ann)
+                flash('Announcement deleted!', 'success')
+        
         db.session.commit()
     
     announcements = Announcement.query.all()

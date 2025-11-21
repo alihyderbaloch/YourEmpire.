@@ -6,19 +6,25 @@
     <title>Manage Announcements</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-gradient-to-r from-purple-900 to-blue-900 text-white p-4 shadow-lg">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Manage Announcements</h1>
-            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-gray-300">Back</a>
+<body class="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 min-h-screen">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center flex-wrap">
+            <h1 class="text-2xl font-bold text-white">Manage Announcements</h1>
+            <div class="space-x-2 md:space-x-4 text-sm md:text-base flex flex-wrap">
+                <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
+                <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Ads</a>
+                <a href="{{ url_for('manage_guide_videos') }}" class="text-white hover:text-purple-200 transition">Guide Videos</a>
+                <a href="{{ url_for('profile_updates') }}" class="text-white hover:text-purple-200 transition">Profile Updates</a>
+                <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
+            </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-6">
+    <div class="container mx-auto px-4 py-8">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-500/20 text-red-100{% else %}bg-green-500/20 text-green-100{% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -26,51 +32,64 @@
         {% endwith %}
 
         <!-- Add Announcement -->
-        <div class="bg-white p-6 rounded-lg shadow mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-purple-900">Add Announcement</h2>
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-white">Add Announcement</h2>
             <form method="POST" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="action" value="add">
-                <div>
-                    <label class="block font-semibold mb-2">Type</label>
-                    <select name="announcement_type" required class="w-full border p-2 rounded">
-                        <option value="text">Text</option>
-                        <option value="image">Image</option>
-                        <option value="video">Video</option>
-                    </select>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white font-semibold mb-2">Type</label>
+                        <select name="announcement_type" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                            <option value="text">Text</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                    <div id="mediaField" style="display:none;">
+                        <label class="block text-white font-semibold mb-2">Media File</label>
+                        <input type="file" name="media_file" class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white">
+                    </div>
                 </div>
                 <div>
-                    <label class="block font-semibold mb-2">Content</label>
-                    <textarea name="content" required class="w-full border p-2 rounded" rows="5"></textarea>
+                    <label class="block text-white font-semibold mb-2">Content</label>
+                    <textarea name="content" required class="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:border-white" rows="4"></textarea>
                 </div>
-                <div id="mediaField" style="display:none;">
-                    <label class="block font-semibold mb-2">Media File</label>
-                    <input type="file" name="media_file" class="w-full border p-2 rounded">
-                </div>
-                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Add Announcement</button>
+                <button type="submit" class="bg-white text-purple-600 px-6 py-2 rounded-lg font-bold hover:bg-purple-100 transition">Add Announcement</button>
             </form>
         </div>
 
         <!-- Announcements List -->
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-2xl font-bold mb-4 text-purple-900">Current Announcements</h2>
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4 text-white">Current Announcements</h2>
+            {% if announcements %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% for ann in announcements %}
-                    <div class="border p-4 rounded-lg {% if ann.is_active %}border-green-500{% else %}border-gray-300{% endif %}">
+                    <div class="bg-white/10 border border-white/20 p-4 rounded-lg backdrop-blur-sm">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-sm font-semibold text-gray-600">{{ ann.type }}</span>
-                            <span class="text-xs {% if ann.is_active %}text-green-600{% else %}text-red-600{% endif %}">
-                                {% if ann.is_active %}Active{% else %}Inactive{% endif %}
+                            <span class="text-sm font-semibold text-white/80">{{ ann.type|upper }}</span>
+                            <span class="text-xs {% if ann.is_active %}text-green-400{% else %}text-red-400{% endif %} font-bold">
+                                {% if ann.is_active %}● ACTIVE{% else %}● INACTIVE{% endif %}
                             </span>
                         </div>
-                        <p class="text-gray-700 mb-3">{{ ann.content[:100] }}...</p>
-                        <form method="POST" action="{{ url_for('toggle_announcement', ann_id=ann.id) }}" style="display:inline;">
-                            <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                {% if ann.is_active %}Disable{% else %}Enable{% endif %}
-                            </button>
-                        </form>
+                        <p class="text-white mb-3">{{ ann.content[:80] }}{% if ann.content|length > 80 %}...{% endif %}</p>
+                        <div class="flex gap-2">
+                            <form method="POST" action="{{ url_for('toggle_announcement', ann_id=ann.id) }}" style="display:inline;">
+                                <button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition">
+                                    {% if ann.is_active %}Disable{% else %}Enable{% endif %}
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('manage_announcements') }}" style="display:inline;" onsubmit="return confirm('Delete this announcement?')">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="ann_id" value="{{ ann.id }}">
+                                <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition">Delete</button>
+                            </form>
+                        </div>
                     </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <p class="text-white/60 text-center py-8">No announcements created yet</p>
+            {% endif %}
         </div>
     </div>
 
