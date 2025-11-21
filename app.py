@@ -16,6 +16,13 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ADS_FOLDER'] = 'static/ads'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///yourempire.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 3600,
+    'pool_size': 10,
+    'max_overflow': 20,
+    'connect_args': {'connect_timeout': 10, 'sslmode': 'allow'}
+}
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'mp4', 'webm'}
 
