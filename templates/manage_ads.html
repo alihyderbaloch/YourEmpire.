@@ -11,10 +11,12 @@
         <div class="container mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-white">YourEmpire Admin</h1>
-                <div class="space-x-4">
+                <div class="space-x-2 md:space-x-4 text-sm md:text-base flex flex-wrap">
                     <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
-                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Manage Ads</a>
-                    <a href="{{ url_for('change_admin_password') }}" class="text-white hover:text-purple-200 transition">Change Password</a>
+                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Ads</a>
+                    <a href="{{ url_for('manage_announcements') }}" class="text-white hover:text-purple-200 transition">Announcements</a>
+                    <a href="{{ url_for('manage_guide_videos') }}" class="text-white hover:text-purple-200 transition">Guide Videos</a>
+                    <a href="{{ url_for('profile_updates') }}" class="text-white hover:text-purple-200 transition">Profile Updates</a>
                     <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
                 </div>
             </div>
