@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commission Tracking - YourEmpire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 min-h-screen">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap">
+                <h1 class="text-2xl font-bold text-white">Commission Tracking</h1>
+                <div class="space-x-2 md:space-x-4 text-sm md:text-base flex flex-wrap">
+                    <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
+                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Ads</a>
+                    <a href="{{ url_for('manage_announcements') }}" class="text-white hover:text-purple-200 transition">Announcements</a>
+                    <a href="{{ url_for('manage_guide_videos') }}" class="text-white hover:text-purple-200 transition">Guide Videos</a>
+                    <a href="{{ url_for('profile_updates') }}" class="text-white hover:text-purple-200 transition">Profile Updates</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-500/20 text-red-100{% else %}bg-green-500/20 text-green-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="text-3xl font-bold text-white mb-6">Referral Commission Tracking</h2>
+        <p class="text-white/80 mb-6">Only showing users who have purchased a package and have active referrals</p>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 overflow-x-auto">
+            {% if commissions %}
+            <table class="w-full text-white text-sm md:text-base">
+                <thead>
+                    <tr class="border-b border-white/20">
+                        <th class="text-left py-3 px-2">User Name</th>
+                        <th class="text-left py-3 px-2">Referral Code</th>
+                        <th class="text-center py-3 px-2">Total Referrals</th>
+                        <th class="text-center py-3 px-2">Paid Referrals</th>
+                        <th class="text-center py-3 px-2">Pending Commission</th>
+                        <th class="text-center py-3 px-2">Paid Commission</th>
+                        <th class="text-center py-3 px-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comm in commissions %}
+                    <tr class="border-b border-white/10 hover:bg-white/5 transition">
+                        <td class="py-3 px-2">{{ comm.user_name }}</td>
+                        <td class="py-3 px-2 font-bold text-yellow-300">{{ comm.referral_code }}</td>
+                        <td class="py-3 px-2 text-center">{{ comm.total_referrals }}</td>
+                        <td class="py-3 px-2 text-center text-green-400 font-bold">{{ comm.paid_referrals }}</td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="{% if comm.pending_commission > 0 %}text-red-400 font-bold{% else %}text-white/60{% endif %}">
+                                🔴 {{ "%.2f"|format(comm.pending_commission) }} PKR
+                            </span>
+                        </td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="{% if comm.paid_commission > 0 %}text-green-400 font-bold{% else %}text-white/60{% endif %}">
+                                🟢 {{ "%.2f"|format(comm.paid_commission) }} PKR
+                            </span>
+                        </td>
+                        <td class="py-3 px-2 text-center">
+                            {% if comm.pending_commission > 0 %}
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('Mark this commission as paid?')">
+                                <input type="hidden" name="user_id" value="{{ comm.user_id }}">
+                                <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 transition">
+                                    Mark Paid
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-white/50">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center text-white/60 py-8">No commission data available. Users must purchase a package to earn referral commissions.</p>
+            {% endif %}
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid md:grid-cols-3 gap-6 mt-8">
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Pending</h3>
+                <p class="text-4xl font-bold text-red-400">{{ "%.2f"|format(summary.total_pending) }}</p>
+                <p class="text-sm text-white/60 mt-2">PKR to be paid</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Paid</h3>
+                <p class="text-4xl font-bold text-green-400">{{ "%.2f"|format(summary.total_paid) }}</p>
+                <p class="text-sm text-white/60 mt-2">PKR already paid</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Active Sellers</h3>
+                <p class="text-4xl font-bold text-yellow-300">{{ summary.active_sellers }}</p>
+                <p class="text-sm text-white/60 mt-2">Users earning commissions</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white/10 backdrop-blur-md border-t border-white/20 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-white/80">Made with ❤️ by YourEmpire</p>
+        </div>
+    </footer>
+</body>
+</html>

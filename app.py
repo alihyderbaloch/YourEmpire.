@@ -706,6 +706,64 @@ def view_user_tree(user_id):
     tree = build_tree(user)
     return render_template('user_tree.html', user=user, tree=tree)
 
+@app.route('/admin/commission-tracking', methods=['GET', 'POST'])
+@admin_required
+def commission_tracking():
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        user = User.query.get(user_id)
+        if user:
+            # Mark all pending commissions as paid for this user
+            for referral in user.referred_users:
+                paid_payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
+                for payment in paid_payments:
+                    # Add pending commission to wallet
+                    commission_rate = float(get_setting('commission_percentage', 50)) / 100
+                    commission = payment.amount * commission_rate
+                    user.wallet_balance += commission
+            db.session.commit()
+            flash(f'Commissions marked as paid for {user.full_name}!', 'success')
+    
+    # Get all users who have purchased packages
+    users_with_packages = db.session.query(User).join(Payment).filter(Payment.status == 'Approved').distinct().all()
+    
+    commissions = []
+    summary = {'total_pending': 0, 'total_paid': 0, 'active_sellers': 0}
+    
+    commission_rate = float(get_setting('commission_percentage', 50)) / 100
+    
+    for user in users_with_packages:
+        if len(user.referred_users) > 0:
+            total_referrals = len(user.referred_users)
+            paid_referrals = len([r for r in user.referred_users if Payment.query.filter_by(user_id=r.id, status='Approved').first()])
+            
+            pending_commission = 0
+            paid_commission = 0
+            
+            for referral in user.referred_users:
+                payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
+                for payment in payments:
+                    pending_commission += payment.amount * commission_rate
+            
+            paid_commission = 0  # Can track if we add a commission tracking table later
+            
+            commissions.append({
+                'user_id': user.id,
+                'user_name': user.full_name,
+                'referral_code': user.referral_code,
+                'total_referrals': total_referrals,
+                'paid_referrals': paid_referrals,
+                'pending_commission': pending_commission,
+                'paid_commission': paid_commission
+            })
+            
+            summary['total_pending'] += pending_commission
+            summary['active_sellers'] += 1
+    
+    summary['total_paid'] = 0  # Initialize paid total
+    
+    return render_template('commission_tracking.html', commissions=commissions, summary=summary)
+
 @app.route('/admin/profile-updates')
 @admin_required
 def profile_updates():
