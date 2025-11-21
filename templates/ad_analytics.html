@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Analytics - YourEmpire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 min-h-screen">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap">
+                <h1 class="text-2xl font-bold text-white">Ad Analytics</h1>
+                <div class="space-x-2 md:space-x-4 text-sm md:text-base flex flex-wrap">
+                    <a href="{{ url_for('admin_dashboard') }}" class="text-white hover:text-purple-200 transition">Dashboard</a>
+                    <a href="{{ url_for('manage_ads') }}" class="text-white hover:text-purple-200 transition">Manage Ads</a>
+                    <a href="{{ url_for('commission_tracking') }}" class="text-white hover:text-purple-200 transition">Commissions</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-purple-200 transition">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-500/20 text-red-100{% else %}bg-green-500/20 text-green-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="text-3xl font-bold text-white mb-6">Ad Performance Analytics</h2>
+
+        <!-- Summary Cards -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Ads</h3>
+                <p class="text-4xl font-bold text-white">{{ summary.total_ads }}</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Views</h3>
+                <p class="text-4xl font-bold text-blue-300">{{ summary.total_views }}</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Total Rewards Paid</h3>
+                <p class="text-4xl font-bold text-green-400">{{ "%.2f"|format(summary.total_rewards) }}</p>
+                <p class="text-sm text-white/60 mt-2">PKR</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                <h3 class="text-lg text-white/80 mb-2">Active Users</h3>
+                <p class="text-4xl font-bold text-yellow-300">{{ summary.active_users }}</p>
+            </div>
+        </div>
+
+        <!-- Ad Performance Table -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6 overflow-x-auto">
+            <h3 class="text-2xl font-bold text-white mb-4">Ad Performance Details</h3>
+            {% if ads_data %}
+            <table class="w-full text-white text-xs md:text-sm">
+                <thead>
+                    <tr class="border-b border-white/20">
+                        <th class="text-left py-3 px-2">Ad Title</th>
+                        <th class="text-center py-3 px-2">Type</th>
+                        <th class="text-center py-3 px-2">Views</th>
+                        <th class="text-center py-3 px-2">Reward/View</th>
+                        <th class="text-right py-3 px-2">Total Paid</th>
+                        <th class="text-center py-3 px-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ad in ads_data %}
+                    <tr class="border-b border-white/10 hover:bg-white/5 transition">
+                        <td class="py-3 px-2 font-semibold">{{ ad.title[:30] }}</td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="bg-blue-500/30 text-blue-200 px-2 py-1 rounded text-xs font-bold">{{ ad.type|upper }}</span>
+                        </td>
+                        <td class="py-3 px-2 text-center text-cyan-300 font-bold">{{ ad.views }}</td>
+                        <td class="py-3 px-2 text-center text-yellow-300">{{ "%.5f"|format(ad.reward) }} PKR</td>
+                        <td class="py-3 px-2 text-right text-green-400 font-bold">{{ "%.2f"|format(ad.total_paid) }} PKR</td>
+                        <td class="py-3 px-2 text-center">
+                            {% if ad.is_active %}
+                            <span class="text-green-400 font-bold">🟢 Active</span>
+                            {% else %}
+                            <span class="text-red-400 font-bold">🔴 Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center text-white/60 py-8">No ads have been viewed yet. Create ads in the Manage Ads section.</p>
+            {% endif %}
+        </div>
+
+        <!-- Ad Viewers Breakdown -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 overflow-x-auto">
+            <h3 class="text-2xl font-bold text-white mb-4">Who Watched Each Ad</h3>
+            {% if viewers_data %}
+            <table class="w-full text-white text-xs md:text-sm">
+                <thead>
+                    <tr class="border-b border-white/20">
+                        <th class="text-left py-3 px-2">Ad Title</th>
+                        <th class="text-left py-3 px-2">User Name</th>
+                        <th class="text-center py-3 px-2">Views Count</th>
+                        <th class="text-right py-3 px-2">Reward Earned</th>
+                        <th class="text-left py-3 px-2">Last Viewed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for view in viewers_data %}
+                    <tr class="border-b border-white/10 hover:bg-white/5 transition">
+                        <td class="py-3 px-2 font-semibold">{{ view.ad_title[:25] }}</td>
+                        <td class="py-3 px-2">{{ view.user_name }}</td>
+                        <td class="py-3 px-2 text-center text-cyan-300 font-bold">{{ view.view_count }}</td>
+                        <td class="py-3 px-2 text-right text-green-400 font-bold">{{ "%.2f"|format(view.reward_earned) }} PKR</td>
+                        <td class="py-3 px-2 text-sm">{{ view.last_viewed.strftime('%Y-%m-%d %H:%M') if view.last_viewed else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center text-white/60 py-8">No one has watched any ads yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer class="bg-white/10 backdrop-blur-md border-t border-white/20 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-white/80">Made with ❤️ by YourEmpire</p>
+        </div>
+    </footer>
+</body>
+</html>
