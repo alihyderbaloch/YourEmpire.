@@ -92,6 +92,25 @@ def migrate_from_json():
                 db.session.add(pm)
                 print(f"✓ Migrated payment method: {pm_data['type']}")
         
+        # Add Default Payment Methods if not already present
+        default_methods = [
+            {'type': 'Easypaisa', 'account_number': '03001234567', 'account_name': 'YourEmpire Business'},
+            {'type': 'JazzCash', 'account_number': '03015678901', 'account_name': 'YourEmpire Official'},
+            {'type': 'Sadapay', 'account_number': 'sadapay@yourempire', 'account_name': 'YourEmpire Sadapay'},
+            {'type': 'Bank Account', 'account_number': '1234567890123', 'account_name': 'YourEmpire Ltd', 'bank_name': 'HBL'}
+        ]
+        
+        for method in default_methods:
+            if not PaymentMethod.query.filter_by(type=method['type']).first():
+                pm = PaymentMethod(
+                    type=method['type'],
+                    account_number=method['account_number'],
+                    account_name=method['account_name'],
+                    bank_name=method.get('bank_name', '')
+                )
+                db.session.add(pm)
+                print(f"✓ Created default payment method: {method['type']}")
+        
         db.session.commit()
         
         # Migrate Settings
