@@ -802,43 +802,43 @@ def commission_tracking():
             db.session.commit()
             flash(f'Commissions marked as paid for {user.full_name}!', 'success')
     
-    # Get all users who have purchased packages
-    users_with_packages = db.session.query(User).join(Payment).filter(Payment.status == 'Approved').distinct().all()
+    # Get all users
+    all_users = User.query.all()
     
     commissions = []
     summary = {'total_pending': 0, 'total_paid': 0, 'active_sellers': 0}
     
     commission_rate = float(get_setting('commission_percentage', 50)) / 100
     
-    for user in users_with_packages:
-        if len(user.referred_users) > 0:
+    # Calculate commissions for users with referrals
+    for user in all_users:
+        if user.referred_users and len(user.referred_users) > 0:
             total_referrals = len(user.referred_users)
-            paid_referrals = len([r for r in user.referred_users if Payment.query.filter_by(user_id=r.id, status='Approved').first()])
-            
+            paid_referrals = 0
             pending_commission = 0
-            paid_commission = 0
             
             for referral in user.referred_users:
                 payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
-                for payment in payments:
-                    pending_commission += payment.amount * commission_rate
+                if payments:
+                    paid_referrals += 1
+                    for payment in payments:
+                        pending_commission += payment.amount * commission_rate
             
-            paid_commission = 0  # Can track if we add a commission tracking table later
-            
-            commissions.append({
-                'user_id': user.id,
-                'user_name': user.full_name,
-                'referral_code': user.referral_code,
-                'total_referrals': total_referrals,
-                'paid_referrals': paid_referrals,
-                'pending_commission': pending_commission,
-                'paid_commission': paid_commission
-            })
-            
-            summary['total_pending'] += pending_commission
-            summary['active_sellers'] += 1
+            if pending_commission > 0 or total_referrals > 0:
+                commissions.append({
+                    'user_id': user.id,
+                    'user_name': user.full_name,
+                    'referral_code': user.referral_code,
+                    'total_referrals': total_referrals,
+                    'paid_referrals': paid_referrals,
+                    'pending_commission': pending_commission,
+                    'paid_commission': 0
+                })
+                
+                summary['total_pending'] += pending_commission
+                summary['active_sellers'] += 1
     
-    summary['total_paid'] = 0  # Initialize paid total
+    summary['total_paid'] = 0
     
     return render_template('commission_tracking.html', commissions=commissions, summary=summary)
 
