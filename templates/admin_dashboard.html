@@ -143,9 +143,7 @@
                             <td class="py-2">{{ method.account_name }}</td>
                             <td class="py-2">{{ method.bank_name or 'N/A' }}</td>
                             <td class="py-2">
-                                <form method="GET" action="{{ url_for('edit_payment_method', method_id=method.id) }}" style="display:inline;">
-                                    <button type="submit" class="text-blue-400 hover:text-blue-300">Edit</button>
-                                </form>
+                                <!-- Edit button removed - payment methods are permanent -->
                             </td>
                         </tr>
                         {% endfor %}
