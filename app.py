@@ -91,6 +91,27 @@ def init_default_settings():
         master_admin.set_password('admin123')
         db.session.add(master_admin)
         db.session.commit()
+    
+    # Create default packages if not exist
+    if not Package.query.first():
+        packages = [
+            Package(name='Bronze', price=450),
+            Package(name='Silver', price=1000),
+            Package(name='Diamond', price=1250),
+            Package(name='Platinum', price=2000)
+        ]
+        db.session.add_all(packages)
+        db.session.commit()
+    
+    # Create default payment methods if not exist
+    if not PaymentMethod.query.first():
+        methods = [
+            PaymentMethod(type='Easypaisa', account_number='03001234567', account_name='YourEmpire Account'),
+            PaymentMethod(type='JazzCash', account_number='03009876543', account_name='YourEmpire Account'),
+            PaymentMethod(type='Bank Account', account_number='1234567890123456', account_name='YourEmpire', bank_name='HBL Bank')
+        ]
+        db.session.add_all(methods)
+        db.session.commit()
 
 @app.route('/')
 def index():
