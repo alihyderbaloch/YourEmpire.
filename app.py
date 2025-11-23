@@ -72,6 +72,7 @@ def set_setting(key, value):
     db.session.commit()
 
 def init_default_settings():
+    # Create default settings
     if not Settings.query.first():
         defaults = {
             'commission_percentage': '50',
@@ -82,6 +83,13 @@ def init_default_settings():
         for key, value in defaults.items():
             setting = Settings(key=key, value=value)
             db.session.add(setting)
+        db.session.commit()
+    
+    # Create default Master Admin if not exist
+    if not MasterAdmin.query.first():
+        master_admin = MasterAdmin(email='admin@yourempire.com')
+        master_admin.set_password('admin123')
+        db.session.add(master_admin)
         db.session.commit()
 
 @app.route('/')
