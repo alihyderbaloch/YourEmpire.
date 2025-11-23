@@ -136,12 +136,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for method in settings.get('payment_methods', []) %}
+                        {% for method in payment_methods %}
                         <tr class="border-b border-white/10">
                             <td class="py-2">{{ method.type }}</td>
                             <td class="py-2 font-mono">{{ method.account_number }}</td>
                             <td class="py-2">{{ method.account_name }}</td>
-                            <td class="py-2">{{ method.get('bank_name', 'N/A') }}</td>
+                            <td class="py-2">{{ method.bank_name or 'N/A' }}</td>
                             <td class="py-2">
                                 <form method="POST" action="{{ url_for('manage_payment_methods') }}" style="display:inline;">
                                     <input type="hidden" name="action" value="delete">
@@ -203,16 +203,12 @@
                         {% for payment in payments %}
                         {% if payment.status == 'Pending' %}
                         <tr class="border-b border-white/10">
-                            <td class="py-2">
-                                {% for user in users %}
-                                    {% if user.id == payment.user_id %}{{ user.name }}{% endif %}
-                                {% endfor %}
-                            </td>
-                            <td class="py-2">{{ payment.package_name }}</td>
+                            <td class="py-2">{{ payment.user.full_name }}</td>
+                            <td class="py-2">{{ payment.package.name }}</td>
                             <td class="py-2">{{ payment.amount }} PKR</td>
-                            <td class="py-2">{{ payment.payment_method }}</td>
+                            <td class="py-2">{{ payment.payment_method_id }}</td>
                             <td class="py-2 font-mono text-sm">{{ payment.transaction_id }}</td>
-                            <td class="py-2 text-sm">{{ payment.date }}</td>
+                            <td class="py-2 text-sm">{{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else '-' }}</td>
                             <td class="py-2 space-x-2">
                                 <a href="{{ url_for('approve_payment', payment_id=payment.id) }}" class="text-green-400 hover:text-green-300">Approve</a>
                                 <a href="{{ url_for('reject_payment', payment_id=payment.id) }}" class="text-red-400 hover:text-red-300">Reject</a>
@@ -243,15 +239,11 @@
                         {% for withdrawal in withdrawals %}
                         {% if withdrawal.status == 'Pending' %}
                         <tr class="border-b border-white/10">
-                            <td class="py-2">
-                                {% for user in users %}
-                                    {% if user.id == withdrawal.user_id %}{{ user.name }}{% endif %}
-                                {% endfor %}
-                            </td>
+                            <td class="py-2">{{ withdrawal.user.full_name }}</td>
                             <td class="py-2">{{ withdrawal.amount }} PKR</td>
                             <td class="py-2">{{ withdrawal.payment_method }}</td>
                             <td class="py-2 text-sm">{{ withdrawal.account_number }} - {{ withdrawal.account_name }}</td>
-                            <td class="py-2 text-sm">{{ withdrawal.date }}</td>
+                            <td class="py-2 text-sm">{{ withdrawal.created_at.strftime('%Y-%m-%d %H:%M') if withdrawal.created_at else '-' }}</td>
                             <td class="py-2 space-x-2">
                                 <a href="{{ url_for('approve_withdrawal', withdrawal_id=withdrawal.id) }}" class="text-green-400 hover:text-green-300">Approve</a>
                                 <a href="{{ url_for('reject_withdrawal', withdrawal_id=withdrawal.id) }}" class="text-red-400 hover:text-red-300">Reject</a>
