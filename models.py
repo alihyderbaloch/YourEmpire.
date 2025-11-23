@@ -85,7 +85,7 @@ class Payment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=False)
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id', ondelete='CASCADE'), nullable=False)
     transaction_id = db.Column(db.String(255), nullable=True)
     screenshot = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(20), default='Pending')  # Pending, Approved, Rejected
