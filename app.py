@@ -904,13 +904,11 @@ def manage_payment_methods():
             if method_id:
                 method = PaymentMethod.query.get(int(method_id))
                 if method:
-                    # Check if any payments use this method
-                    payments_using_method = Payment.query.filter_by(payment_method_id=int(method_id)).first()
-                    if payments_using_method:
-                        flash('Cannot delete this payment method - it is being used by existing payments!', 'error')
-                    else:
-                        db.session.delete(method)
-                        flash('Payment method deleted!', 'success')
+                    # Remove this payment method from all payments that use it
+                    Payment.query.filter_by(payment_method_id=int(method_id)).update({'payment_method_id': None})
+                    # Delete the payment method
+                    db.session.delete(method)
+                    flash('Payment method deleted!', 'success')
                 else:
                     flash('Payment method not found!', 'error')
             else:
