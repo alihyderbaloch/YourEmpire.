@@ -102,16 +102,6 @@ def init_default_settings():
         ]
         db.session.add_all(packages)
         db.session.commit()
-    
-    # Create default payment methods if not exist
-    if not PaymentMethod.query.first():
-        methods = [
-            PaymentMethod(type='Easypaisa', account_number='03001234567', account_name='YourEmpire Account'),
-            PaymentMethod(type='JazzCash', account_number='03009876543', account_name='YourEmpire Account'),
-            PaymentMethod(type='Bank Account', account_number='1234567890123456', account_name='YourEmpire', bank_name='HBL Bank')
-        ]
-        db.session.add_all(methods)
-        db.session.commit()
 
 @app.route('/')
 def index():
