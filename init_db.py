@@ -5,6 +5,7 @@ from app import app, db
 from models import User, Admin, MasterAdmin, Package, PaymentMethod, Settings, Ad, Payment, Withdrawal, AdView
 from werkzeug.security import generate_password_hash
 
+
 def migrate_from_json():
     """Migrate existing JSON data to PostgreSQL"""
     
@@ -158,4 +159,7 @@ def load_json_file(filename, default):
         return default
 
 if __name__ == '__main__':
+    with app.app_context():
+    db.create_all()
     migrate_from_json()
+
