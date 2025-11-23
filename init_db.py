@@ -159,7 +159,5 @@ def load_json_file(filename, default):
         return default
 
 if __name__ == '__main__':
-    with app.app_context():
-    db.create_all()
     migrate_from_json()
 
