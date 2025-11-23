@@ -899,17 +899,6 @@ def manage_payment_methods():
                     method.bank_name = request.form.get('bank_name', '')
                     flash('Payment method updated!', 'success')
         
-        elif action == 'delete':
-            method_id = request.form.get('method_id')
-            if method_id:
-                method = PaymentMethod.query.get(int(method_id))
-                if method:
-                    db.session.delete(method)
-                    flash('Payment method deleted successfully!', 'success')
-                else:
-                    flash('Payment method not found!', 'error')
-            else:
-                flash('Invalid request!', 'error')
         
         db.session.commit()
     except Exception as e:
