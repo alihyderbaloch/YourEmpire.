@@ -875,34 +875,47 @@ def reject_profile_update(update_id):
 @app.route('/admin/manage-payment-methods', methods=['POST'])
 @admin_required
 def manage_payment_methods():
-    action = request.form.get('action')
+    try:
+        action = request.form.get('action')
+        
+        if action == 'add':
+            new_method = PaymentMethod(
+                type=request.form.get('type'),
+                account_number=request.form.get('account_number'),
+                account_name=request.form.get('account_name'),
+                bank_name=request.form.get('bank_name', '')
+            )
+            db.session.add(new_method)
+            flash('Payment method added!', 'success')
+        
+        elif action == 'edit':
+            method_id = request.form.get('method_id')
+            if method_id:
+                method = PaymentMethod.query.get(int(method_id))
+                if method:
+                    method.type = request.form.get('type')
+                    method.account_number = request.form.get('account_number')
+                    method.account_name = request.form.get('account_name')
+                    method.bank_name = request.form.get('bank_name', '')
+                    flash('Payment method updated!', 'success')
+        
+        elif action == 'delete':
+            method_id = request.form.get('method_id')
+            if method_id:
+                method = PaymentMethod.query.get(int(method_id))
+                if method:
+                    db.session.delete(method)
+                    flash('Payment method deleted!', 'success')
+                else:
+                    flash('Payment method not found!', 'error')
+            else:
+                flash('Invalid request!', 'error')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
     
-    if action == 'add':
-        new_method = PaymentMethod(
-            type=request.form.get('type'),
-            account_number=request.form.get('account_number'),
-            account_name=request.form.get('account_name'),
-            bank_name=request.form.get('bank_name', '')
-        )
-        db.session.add(new_method)
-        flash('Payment method added!', 'success')
-    
-    elif action == 'edit':
-        method = PaymentMethod.query.get(int(request.form.get('method_id')))
-        if method:
-            method.type = request.form.get('type')
-            method.account_number = request.form.get('account_number')
-            method.account_name = request.form.get('account_name')
-            method.bank_name = request.form.get('bank_name', '')
-            flash('Payment method updated!', 'success')
-    
-    elif action == 'delete':
-        method = PaymentMethod.query.get(int(request.form.get('method_id')))
-        if method:
-            db.session.delete(method)
-            flash('Payment method deleted!', 'success')
-    
-    db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/manage-packages', methods=['POST'])
