@@ -109,14 +109,14 @@
                     <tbody>
                         {% for payment in payments %}
                         <tr class="border-b border-white/10">
-                            <td class="py-2">{{ payment.package_name }}</td>
+                            <td class="py-2">{{ payment.package.name if payment.package else 'Unknown' }}</td>
                             <td class="py-2">{{ payment.amount }} PKR</td>
                             <td class="py-2">
                                 <span class="px-3 py-1 rounded-full text-sm {% if payment.status == 'Approved' %}bg-green-500/30{% elif payment.status == 'Pending' %}bg-yellow-500/30{% else %}bg-red-500/30{% endif %}">
                                     {{ payment.status }}
                                 </span>
                             </td>
-                            <td class="py-2">{{ payment.date }}</td>
+                            <td class="py-2">{{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else '-' }}</td>
                         </tr>
                         {% else %}
                         <tr>
@@ -150,7 +150,7 @@
                                     {{ withdrawal.status }}
                                 </span>
                             </td>
-                            <td class="py-2">{{ withdrawal.date }}</td>
+                            <td class="py-2">{{ withdrawal.created_at.strftime('%Y-%m-%d %H:%M') if withdrawal.created_at else '-' }}</td>
                         </tr>
                         {% else %}
                         <tr>
