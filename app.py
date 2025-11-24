@@ -59,8 +59,16 @@ def master_admin_required(f):
     return decorated_function
 
 def get_setting(key, default=None):
-    setting = Settings.query.filter_by(key=key).first()
-    return setting.value if setting else default
+    try:
+        setting = Settings.query.filter_by(key=key).first()
+        if setting:
+            try:
+                return float(setting.value) if key == 'commission_percentage' or key == 'min_withdrawal' else setting.value
+            except:
+                return float(default) if default else 0
+        return float(default) if default else 0
+    except:
+        return float(default) if default else 0
 
 def set_setting(key, value):
     setting = Settings.query.filter_by(key=key).first()
