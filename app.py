@@ -917,10 +917,14 @@ def manage_payment_methods():
 @admin_required
 def delete_all_payment_methods():
     try:
-        # Delete all payment methods from database
+        # First delete all payments that reference payment methods
+        Payment.query.delete()
+        db.session.flush()
+        
+        # Then delete all payment methods
         PaymentMethod.query.delete()
         db.session.commit()
-        flash('✅ All payment methods deleted successfully!', 'success')
+        flash('✅ All payment methods and their payments deleted successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'❌ Error deleting payment methods: {str(e)}', 'error')
