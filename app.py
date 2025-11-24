@@ -786,7 +786,10 @@ def commission_tracking():
                 paid_payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
                 for payment in paid_payments:
                     # Add pending commission to wallet
-                    commission_rate = float(get_setting('commission_percentage', 50)) / 100
+                    try:
+                        commission_rate = float(get_setting('commission_percentage', 50)) / 100
+                    except:
+                        commission_rate = 0.5
                     commission = payment.amount * commission_rate
                     user.wallet_balance += commission
             db.session.commit()
@@ -798,7 +801,10 @@ def commission_tracking():
     commissions = []
     summary = {'total_pending': 0, 'total_paid': 0, 'active_sellers': 0}
     
-    commission_rate = float(get_setting('commission_percentage', 50)) / 100
+    try:
+        commission_rate = float(get_setting('commission_percentage', 50)) / 100
+    except:
+        commission_rate = 0.5
     
     # Calculate commissions for users with referrals
     for user in all_users:
