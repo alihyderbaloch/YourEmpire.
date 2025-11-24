@@ -913,6 +913,20 @@ def manage_payment_methods():
     
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/delete-all-payment-methods', methods=['POST'])
+@admin_required
+def delete_all_payment_methods():
+    try:
+        # Delete all payment methods from database
+        PaymentMethod.query.delete()
+        db.session.commit()
+        flash('✅ All payment methods deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'❌ Error deleting payment methods: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/manage-packages', methods=['POST'])
 @admin_required
 def manage_packages():
