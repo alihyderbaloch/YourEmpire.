@@ -94,6 +94,7 @@ class Payment(db.Model):
     
     user = db.relationship('User', backref='payments')
     package = db.relationship('Package')
+    payment_method = db.relationship('PaymentMethod')
     admin = db.relationship('Admin')
 
 class Withdrawal(db.Model):

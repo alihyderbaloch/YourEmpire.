@@ -210,7 +210,7 @@
                             <td class="py-2">{{ payment.user.full_name }}</td>
                             <td class="py-2">{{ payment.package.name }}</td>
                             <td class="py-2">{{ payment.amount }} PKR</td>
-                            <td class="py-2">{{ payment.payment_method_id }}</td>
+                            <td class="py-2">{{ payment.payment_method.type if payment.payment_method else 'Unknown' }} - {{ payment.payment_method.account_number if payment.payment_method else '-' }}</td>
                             <td class="py-2 font-mono text-sm">{{ payment.transaction_id }}</td>
                             <td class="py-2 text-sm">{{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else '-' }}</td>
                             <td class="py-2 space-x-2">
