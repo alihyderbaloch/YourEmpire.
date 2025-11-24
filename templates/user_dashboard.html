@@ -62,6 +62,38 @@
             </a>
         </div>
 
+        {% if announcements %}
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">📢 Announcements</h3>
+            <div class="space-y-4">
+                {% for announcement in announcements %}
+                <div class="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded">
+                    <h4 class="text-lg font-bold text-yellow-300">{{ announcement.title }}</h4>
+                    <p class="text-white/80 mt-2">{{ announcement.content }}</p>
+                    <p class="text-white/60 text-sm mt-2">{{ announcement.created_at.strftime('%Y-%m-%d %H:%M') if announcement.created_at else '-' }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if guide_videos %}
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 class="text-2xl font-bold text-white mb-4">🎥 Guide Videos</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                {% for video in guide_videos %}
+                <div class="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
+                    <h4 class="text-lg font-bold text-blue-300 mb-2">{{ video.title }}</h4>
+                    <p class="text-white/80 text-sm mb-3">{{ video.description }}</p>
+                    <a href="{{ video.video_url }}" target="_blank" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm">
+                        Watch Video →
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
             <h3 class="text-2xl font-bold text-white mb-4">Payment History</h3>
             <div class="overflow-x-auto">
