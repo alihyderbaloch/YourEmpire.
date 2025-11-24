@@ -785,66 +785,92 @@ def ad_analytics():
 @app.route('/admin/commission-tracking', methods=['GET', 'POST'])
 @admin_required
 def commission_tracking():
-    if request.method == 'POST':
-        user_id = request.form.get('user_id')
-        user = User.query.get(user_id)
-        if user:
-            # Mark all pending commissions as paid for this user
-            for referral in user.referred_users:
-                paid_payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
-                for payment in paid_payments:
-                    # Add pending commission to wallet
-                    try:
-                        commission_rate = float(get_setting('commission_percentage', 50)) / 100
-                    except:
-                        commission_rate = 0.5
-                    commission = payment.amount * commission_rate
-                    user.wallet_balance += commission
-            db.session.commit()
-            flash(f'Commissions marked as paid for {user.full_name}!', 'success')
-    
-    # Get all users
-    all_users = User.query.all()
-    
-    commissions = []
-    summary = {'total_pending': 0, 'total_paid': 0, 'active_sellers': 0}
-    
     try:
-        commission_rate = float(get_setting('commission_percentage', 50)) / 100
-    except:
+        if request.method == 'POST':
+            try:
+                user_id = request.form.get('user_id')
+                user = User.query.get(user_id)
+                if user:
+                    # Mark all pending commissions as paid for this user
+                    if hasattr(user, 'referred_users') and user.referred_users:
+                        for referral in user.referred_users:
+                            try:
+                                paid_payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
+                                for payment in paid_payments:
+                                    # Add pending commission to wallet
+                                    commission_rate = 0.5
+                                    try:
+                                        setting_val = get_setting('commission_percentage', 50)
+                                        if setting_val:
+                                            commission_rate = float(setting_val) / 100
+                                    except:
+                                        commission_rate = 0.5
+                                    commission = float(payment.amount) * commission_rate
+                                    user.wallet_balance += commission
+                            except Exception as inner_e:
+                                pass
+                    db.session.commit()
+                    flash(f'Commissions marked as paid for {user.full_name}!', 'success')
+            except Exception as post_e:
+                db.session.rollback()
+                flash(f'Error processing commission: {str(post_e)}', 'error')
+        
+        # Get all users
+        all_users = User.query.all()
+        
+        commissions = []
+        summary = {'total_pending': 0.0, 'total_paid': 0.0, 'active_sellers': 0}
+        
         commission_rate = 0.5
-    
-    # Calculate commissions for users with referrals
-    for user in all_users:
-        if user.referred_users and len(user.referred_users) > 0:
-            total_referrals = len(user.referred_users)
-            paid_referrals = 0
-            pending_commission = 0
-            
-            for referral in user.referred_users:
-                payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
-                if payments:
-                    paid_referrals += 1
-                    for payment in payments:
-                        pending_commission += payment.amount * commission_rate
-            
-            if pending_commission > 0 or total_referrals > 0:
-                commissions.append({
-                    'user_id': user.id,
-                    'user_name': user.full_name,
-                    'referral_code': user.referral_code,
-                    'total_referrals': total_referrals,
-                    'paid_referrals': paid_referrals,
-                    'pending_commission': pending_commission,
-                    'paid_commission': 0
-                })
-                
-                summary['total_pending'] += pending_commission
-                summary['active_sellers'] += 1
-    
-    summary['total_paid'] = 0
-    
-    return render_template('commission_tracking.html', commissions=commissions, summary=summary)
+        try:
+            setting_val = get_setting('commission_percentage', 50)
+            if setting_val:
+                commission_rate = float(setting_val) / 100
+        except:
+            commission_rate = 0.5
+        
+        # Calculate commissions for users with referrals
+        for user in all_users:
+            try:
+                if hasattr(user, 'referred_users') and user.referred_users:
+                    referred_list = list(user.referred_users) if user.referred_users else []
+                    if len(referred_list) > 0:
+                        total_referrals = len(referred_list)
+                        paid_referrals = 0
+                        pending_commission = 0.0
+                        
+                        for referral in referred_list:
+                            try:
+                                payments = Payment.query.filter_by(user_id=referral.id, status='Approved').all()
+                                if payments:
+                                    paid_referrals += 1
+                                    for payment in payments:
+                                        pending_commission += float(payment.amount) * commission_rate
+                            except:
+                                pass
+                        
+                        if pending_commission > 0 or total_referrals > 0:
+                            commissions.append({
+                                'user_id': user.id,
+                                'user_name': user.full_name or 'Unknown',
+                                'referral_code': user.referral_code or 'N/A',
+                                'total_referrals': total_referrals,
+                                'paid_referrals': paid_referrals,
+                                'pending_commission': pending_commission,
+                                'paid_commission': 0.0
+                            })
+                            
+                            summary['total_pending'] += pending_commission
+                            summary['active_sellers'] += 1
+            except Exception as user_e:
+                continue
+        
+        summary['total_paid'] = 0.0
+        
+        return render_template('commission_tracking.html', commissions=commissions, summary=summary)
+    except Exception as e:
+        flash(f'Error loading commission tracking: {str(e)}', 'error')
+        return render_template('commission_tracking.html', commissions=[], summary={'total_pending': 0.0, 'total_paid': 0.0, 'active_sellers': 0})
 
 @app.route('/admin/profile-updates')
 @admin_required
